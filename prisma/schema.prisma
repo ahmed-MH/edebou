@@ -1,0 +1,255 @@
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  runtime             = "nodejs"
+  moduleFormat        = "esm"
+  engineType          = "client"
+  importFileExtension = "ts"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  SHIPPING
+  DELIVERED
+  CANCELLED
+
+  @@map("order_status")
+}
+
+enum CheckoutIntentStatus {
+  ACTIVE
+  CONTACTED
+  CONVERTED
+  DISMISSED
+  EXPIRED
+
+  @@map("checkout_intent_status")
+}
+
+enum AdminRole {
+  OWNER
+  MANAGER
+  VIEWER
+
+  @@map("admin_role")
+}
+
+model Category {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slug      String    @unique(map: "categories_slug_key") @db.VarChar(120)
+  nameAr    String    @map("name_ar") @db.VarChar(160)
+  nameFr    String    @map("name_fr") @db.VarChar(160)
+  isActive  Boolean   @default(true) @map("is_active")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  products  Product[]
+
+  @@index([isActive], map: "categories_is_active_idx")
+  @@map("categories")
+}
+
+model Product {
+  id            String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  categoryId    String             @map("category_id") @db.Uuid
+  sku           String             @unique(map: "products_sku_key") @db.VarChar(64)
+  slug          String             @unique(map: "products_slug_key") @db.VarChar(120)
+  nameAr        String             @map("name_ar") @db.VarChar(200)
+  nameFr        String             @map("name_fr") @db.VarChar(200)
+  descriptionAr String             @map("description_ar") @db.Text
+  descriptionFr String             @map("description_fr") @db.Text
+  price         BigInt             @db.BigInt
+  stockQuantity Int                @default(0) @map("stock_quantity")
+  isActive      Boolean            @default(true) @map("is_active")
+  createdAt     DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime           @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  category      Category           @relation(fields: [categoryId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  images        ProductImage[]
+  priceTiers    ProductPriceTier[]
+  orderItems    OrderItem[]
+
+  @@index([categoryId, isActive], map: "products_category_id_is_active_idx")
+  @@index([isActive, createdAt], map: "products_is_active_created_at_idx")
+  @@map("products")
+}
+
+model ProductImage {
+  id        String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  productId String  @map("product_id") @db.Uuid
+  path      String  @db.VarChar(512)
+  altAr     String  @map("alt_ar") @db.VarChar(240)
+  altFr     String  @map("alt_fr") @db.VarChar(240)
+  position  Int     @default(0)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([productId, position], map: "product_images_product_id_position_key")
+  @@index([productId], map: "product_images_product_id_idx")
+  @@map("product_images")
+}
+
+model ProductPriceTier {
+  id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  productId   String  @map("product_id") @db.Uuid
+  minQuantity Int     @map("min_quantity")
+  unitPrice   BigInt  @map("unit_price") @db.BigInt
+  product     Product @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([productId, minQuantity], map: "product_price_tiers_product_id_min_quantity_key")
+  @@index([productId], map: "product_price_tiers_product_id_idx")
+  @@map("product_price_tiers")
+}
+
+model Order {
+  id                 String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orderNumber        String      @unique(map: "orders_order_number_key") @map("order_number") @db.VarChar(64)
+  idempotencyKeyHash String      @unique(map: "orders_idempotency_key_hash_key") @map("idempotency_key_hash") @db.Char(64)
+  requestHash        String      @map("request_hash") @db.Char(64)
+  customerName       String      @map("customer_name") @db.VarChar(160)
+  phone              String      @db.VarChar(32)
+  governorate        String      @db.VarChar(100)
+  address            String      @db.VarChar(500)
+  notes              String?     @db.Text
+  subtotal           BigInt      @db.BigInt
+  deliveryFee        BigInt      @map("delivery_fee") @db.BigInt
+  total              BigInt      @db.BigInt
+  status             OrderStatus @default(PENDING)
+  stockRestoredAt    DateTime?   @map("stock_restored_at") @db.Timestamptz(3)
+  createdAt          DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  items              OrderItem[]
+  checkoutIntent     CheckoutIntent?
+
+  @@index([status, createdAt], map: "orders_status_created_at_idx")
+  @@index([createdAt], map: "orders_created_at_idx")
+  @@map("orders")
+}
+
+model OrderItem {
+  id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orderId             String   @map("order_id") @db.Uuid
+  productId           String?  @map("product_id") @db.Uuid
+  productNameSnapshot String   @map("product_name_snapshot") @db.VarChar(200)
+  skuSnapshot         String   @map("sku_snapshot") @db.VarChar(64)
+  quantity            Int
+  unitPrice           BigInt   @map("unit_price") @db.BigInt
+  lineTotal           BigInt   @map("line_total") @db.BigInt
+  order               Order    @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  product             Product? @relation(fields: [productId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@index([orderId], map: "order_items_order_id_idx")
+  @@index([productId], map: "order_items_product_id_idx")
+  @@map("order_items")
+}
+
+model StoreSettings {
+  id          Int      @id @default(1)
+  deliveryFee BigInt   @map("delivery_fee") @db.BigInt
+  storeName   String   @map("store_name") @db.VarChar(160)
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("store_settings")
+}
+
+model CheckoutRateLimit {
+  keyHash         String   @id @map("key_hash") @db.Char(64)
+  windowStartedAt DateTime @map("window_started_at") @db.Timestamptz(3)
+  requestCount    Int      @map("request_count")
+  updatedAt       DateTime @default(now()) @map("updated_at") @db.Timestamptz(3)
+
+  @@index([updatedAt], map: "checkout_rate_limits_updated_at_idx")
+  @@map("checkout_rate_limits")
+}
+
+model CheckoutIntent {
+  id            String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tokenHash     String               @unique(map: "checkout_intents_token_hash_key") @map("token_hash") @db.Char(64)
+  customerName  String?              @map("customer_name") @db.VarChar(160)
+  phone         String               @db.VarChar(32)
+  governorate   String?              @db.VarChar(100)
+  address       String?              @db.VarChar(500)
+  locale        String               @db.VarChar(2)
+  source        String               @db.VarChar(32)
+  items         Json
+  status        CheckoutIntentStatus @default(ACTIVE)
+  adminNote     String?              @map("admin_note") @db.VarChar(500)
+  orderId       String?              @unique(map: "checkout_intents_order_id_key") @map("order_id") @db.Uuid
+  firstSeenAt   DateTime             @default(now()) @map("first_seen_at") @db.Timestamptz(3)
+  lastSeenAt    DateTime             @default(now()) @map("last_seen_at") @db.Timestamptz(3)
+  contactedAt   DateTime?            @map("contacted_at") @db.Timestamptz(3)
+  convertedAt   DateTime?            @map("converted_at") @db.Timestamptz(3)
+  expiresAt     DateTime             @map("expires_at") @db.Timestamptz(3)
+  updatedAt     DateTime             @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  order         Order?               @relation(fields: [orderId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@index([status, lastSeenAt], map: "checkout_intents_status_last_seen_at_idx")
+  @@index([phone], map: "checkout_intents_phone_idx")
+  @@index([expiresAt], map: "checkout_intents_expires_at_idx")
+  @@map("checkout_intents")
+}
+
+model AdminUser {
+  id                 String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email              String          @unique(map: "admin_users_email_key") @db.VarChar(254)
+  displayName        String          @map("display_name") @db.VarChar(120)
+  passwordHash       String          @map("password_hash") @db.VarChar(255)
+  role               AdminRole       @default(MANAGER)
+  isActive           Boolean         @default(true) @map("is_active")
+  failedLoginCount   Int             @default(0) @map("failed_login_count")
+  lockedUntil        DateTime?       @map("locked_until") @db.Timestamptz(3)
+  lastLoginAt        DateTime?       @map("last_login_at") @db.Timestamptz(3)
+  passwordChangedAt  DateTime        @default(now()) @map("password_changed_at") @db.Timestamptz(3)
+  createdAt          DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  sessions           AdminSession[]
+  auditLogs          AdminAuditLog[]
+
+  @@index([isActive], map: "admin_users_is_active_idx")
+  @@map("admin_users")
+}
+
+model AdminSession {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId         String    @map("user_id") @db.Uuid
+  tokenHash      String    @unique(map: "admin_sessions_token_hash_key") @map("token_hash") @db.Char(64)
+  userAgentHash  String?   @map("user_agent_hash") @db.Char(64)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  lastSeenAt     DateTime  @default(now()) @map("last_seen_at") @db.Timestamptz(3)
+  expiresAt      DateTime  @map("expires_at") @db.Timestamptz(3)
+  user           AdminUser @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([userId, expiresAt], map: "admin_sessions_user_id_expires_at_idx")
+  @@index([expiresAt], map: "admin_sessions_expires_at_idx")
+  @@map("admin_sessions")
+}
+
+model AdminLoginRateLimit {
+  keyHash         String   @id @map("key_hash") @db.Char(64)
+  windowStartedAt DateTime @map("window_started_at") @db.Timestamptz(3)
+  requestCount    Int      @map("request_count")
+  blockedUntil    DateTime? @map("blocked_until") @db.Timestamptz(3)
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([updatedAt], map: "admin_login_rate_limits_updated_at_idx")
+  @@map("admin_login_rate_limits")
+}
+
+model AdminAuditLog {
+  id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  actorUserId String?    @map("actor_user_id") @db.Uuid
+  action      String     @db.VarChar(80)
+  entityType  String     @map("entity_type") @db.VarChar(80)
+  entityId    String?    @map("entity_id") @db.VarChar(160)
+  summary     Json?
+  ipHash      String?    @map("ip_hash") @db.Char(64)
+  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  actor       AdminUser? @relation(fields: [actorUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@index([createdAt], map: "admin_audit_logs_created_at_idx")
+  @@index([actorUserId, createdAt], map: "admin_audit_logs_actor_user_id_created_at_idx")
+  @@index([entityType, entityId], map: "admin_audit_logs_entity_idx")
+  @@map("admin_audit_logs")
+}

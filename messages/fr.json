@@ -1,0 +1,153 @@
+{
+  "Metadata": {
+    "title": "EDebou — L’essentiel, simplement",
+    "description": "Boutique tunisienne EDebou pour vos achats au détail et en gros, avec paiement à la livraison."
+  },
+  "A11y": {
+    "skipToContent": "Aller au contenu principal",
+    "primaryNavigation": "Navigation principale",
+    "mobileNavigation": "Navigation mobile",
+    "footerNavigation": "Navigation de pied de page",
+    "languageNavigation": "Choisir la langue"
+  },
+  "Header": {
+    "searchLabel": "Recherche dans le catalogue",
+    "searchPlaceholder": "Rechercher un produit",
+    "comingSoon": "Catalogue",
+    "cartLabel": "Voir le panier",
+    "cartText": "Panier",
+    "openMenu": "Ouvrir le menu",
+    "closeMenu": "Fermer le menu",
+    "menuTitle": "Menu",
+    "languageLabel": "Langue",
+    "arabic": "العربية",
+    "french": "Français"
+  },
+  "Navigation": {
+    "home": "Accueil",
+    "categories": "Catégories",
+    "products": "Produits"
+  },
+  "Hero": {
+    "eyebrow": "Vente au détail et en gros en Tunisie",
+    "title": "Tout ce qu’il vous faut, au même endroit.",
+    "description": "Découvrez une sélection pensée pour la maison et le quotidien, avec des prix clairs et une expérience simple.",
+    "primaryCta": "Découvrir les produits",
+    "secondaryCta": "Voir les catégories",
+    "visualLabel": "Un aperçu des univers EDebou",
+    "visualCaption": "Une sélection claire pour le quotidien",
+    "visualItems": {
+      "technology": "Technologie",
+      "home": "Maison",
+      "lifestyle": "Quotidien",
+      "care": "Soin"
+    }
+  },
+  "Categories": {
+    "eyebrow": "Tous les essentiels",
+    "title": "Explorez nos univers",
+    "description": "Une structure de catalogue préparée pour réunir les produits du quotidien dans une expérience cohérente.",
+    "items": {
+      "electronics": "Électronique",
+      "home": "Maison",
+      "fashion": "Mode",
+      "beauty": "Beauté et soin",
+      "sport": "Sport et bien-être",
+      "essentials": "Essentiels"
+    }
+  },
+  "Products": {
+    "eyebrow": "Sélection du catalogue",
+    "title": "Nos essentiels du moment",
+    "description": "Découvrez des produits disponibles à l’unité ou en quantité, avec des tarifs transparents.",
+    "demoBadge": "Catalogue en ligne",
+    "demoNoticeTitle": "Des prix clairs, jusqu’à la confirmation",
+    "demoNoticeBody": "Les prix définitifs et la disponibilité sont toujours revérifiés par le serveur au moment de la commande.",
+    "cartUnavailable": "Voir le produit",
+    "imageAlt": "Photo du produit : {name}",
+    "items": {
+      "wirelessEarbuds": "Écouteurs sans fil",
+      "electricKettle": "Bouilloire électrique",
+      "dailyBackpack": "Sac à dos urbain",
+      "dailyCareSet": "Coffret soin quotidien"
+    }
+  },
+  "Catalog": {
+    "eyebrow": "Catalogue EDebou",
+    "title": "Trouvez l’essentiel, simplement",
+    "description": "Recherchez, filtrez et comparez les produits disponibles pour vos achats au détail ou en quantité.",
+    "searchLabel": "Rechercher un produit",
+    "searchPlaceholder": "Nom du produit ou référence",
+    "categoryLabel": "Catégorie",
+    "allCategories": "Toutes les catégories",
+    "sortLabel": "Trier par",
+    "sort": {
+      "newest": "Nouveautés",
+      "priceAsc": "Prix croissant",
+      "priceDesc": "Prix décroissant"
+    },
+    "applyFilters": "Appliquer",
+    "clearFilters": "Effacer les filtres",
+    "resultsCount": "{count} produit(s)",
+    "emptyTitle": "Aucun produit trouvé",
+    "emptyDescription": "Modifiez votre recherche ou vos filtres pour afficher d’autres produits.",
+    "errorTitle": "Le catalogue est momentanément indisponible",
+    "errorDescription": "Réessayez dans quelques instants. Aucun détail technique n’a été exposé.",
+    "retry": "Réessayer",
+    "paginationLabel": "Pagination du catalogue",
+    "previousPage": "Page précédente",
+    "nextPage": "Page suivante",
+    "pageSummary": "Page {page} sur {total}",
+    "viewProduct": "Voir le produit",
+    "imageFallback": "Aucune image disponible"
+  },
+  "ProductDetail": {
+    "backToCatalog": "Retour au catalogue",
+    "categoryLabel": "Catégorie",
+    "skuLabel": "Référence",
+    "unitPriceLabel": "Prix unitaire",
+    "descriptionTitle": "Informations sur le produit",
+    "quantityLabel": "Quantité",
+    "decreaseQuantity": "Diminuer la quantité",
+    "increaseQuantity": "Augmenter la quantité",
+    "pricingTitle": "Tarifs par quantité",
+    "pricingDescription": "Le meilleur palier applicable est affiché à titre indicatif ; le serveur recalcule le prix lors de la commande.",
+    "fromQuantity": "Dès {quantity, plural, one {# unité} other {# unités}}",
+    "eachLabel": "l’unité",
+    "selectedUnitPrice": "Prix unitaire sélectionné",
+    "totalLabel": "Total indicatif",
+    "addToCart": "Ajouter au panier",
+    "addingToCart": "Ajout en cours…",
+    "addedToCart": "Ajouté au panier",
+    "outOfStock": "Ce produit est actuellement indisponible.",
+    "noImage": "Aucune image disponible pour ce produit",
+    "notFoundTitle": "Produit introuvable",
+    "notFoundDescription": "Ce produit est indisponible ou n’existe plus dans le catalogue."
+  },
+  "Availability": {
+    "in_stock": "En stock",
+    "low_stock": "Stock limité",
+    "out_of_stock": "Indisponible"
+  },
+  "Footer": {
+    "description": "Une boutique tunisienne généraliste, conçue pour une expérience simple, claire et sécurisée.",
+    "exploreTitle": "Explorer",
+    "informationTitle": "Informations",
+    "informationBody": "Tunisie · Vente au détail et en gros",
+    "legalTitle": "Informations légales",
+    "futureLabel": "Bientôt",
+    "legal": {
+      "terms": "Conditions générales",
+      "privacy": "Confidentialité",
+      "returns": "Retours"
+    },
+    "rights": "Tous droits réservés.",
+    "brandFallback": "Identité officielle EDebou."
+  },
+  "NotFound": {
+    "eyebrow": "Erreur 404",
+    "title": "Cette page n’existe pas.",
+    "description": "La page demandée est indisponible ou n’a pas encore été créée.",
+    "backHome": "Retour à l’accueil"
+  }
+}

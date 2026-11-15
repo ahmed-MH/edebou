@@ -1,0 +1,64 @@
+name: edebou
+
+services:
+  postgres:
+    image: postgres:18.6-bookworm
+    restart: unless-stopped
+    shm_size: 128mb
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_BOOTSTRAP_USER:?Set POSTGRES_BOOTSTRAP_USER in .env.database}
+      POSTGRES_PASSWORD: ${POSTGRES_BOOTSTRAP_PASSWORD:?Set POSTGRES_BOOTSTRAP_PASSWORD in .env.database}
+      POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB in .env.database}
+      POSTGRES_MIGRATION_USER: ${POSTGRES_MIGRATION_USER:?Set POSTGRES_MIGRATION_USER in .env.database}
+      POSTGRES_MIGRATION_PASSWORD: ${POSTGRES_MIGRATION_PASSWORD:?Set POSTGRES_MIGRATION_PASSWORD in .env.database}
+      POSTGRES_APP_USER: ${POSTGRES_APP_USER:?Set POSTGRES_APP_USER in .env.database}
+      POSTGRES_APP_PASSWORD: ${POSTGRES_APP_PASSWORD:?Set POSTGRES_APP_PASSWORD in .env.database}
+      POSTGRES_CHECKOUT_USER: ${POSTGRES_CHECKOUT_USER:?Set POSTGRES_CHECKOUT_USER in .env.database}
+      POSTGRES_CHECKOUT_PASSWORD: ${POSTGRES_CHECKOUT_PASSWORD:?Set POSTGRES_CHECKOUT_PASSWORD in .env.database}
+      POSTGRES_ADMIN_USER: ${POSTGRES_ADMIN_USER:-}
+      POSTGRES_ADMIN_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:-}
+      POSTGRES_SHADOW_DB: ${POSTGRES_SHADOW_DB:?Set POSTGRES_SHADOW_DB in .env.database}
+      POSTGRES_INITDB_ARGS: >-
+        --auth-host=scram-sha-256
+        --auth-local=scram-sha-256
+        --encoding=UTF8
+        --locale=C.UTF-8
+    command:
+      - postgres
+      - -c
+      - password_encryption=scram-sha-256
+      - -c
+      - max_connections=60
+    volumes:
+      - postgres_data:/var/lib/postgresql
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+      - ./docker/postgres/admin:/opt/edebou-admin:ro
+    tmpfs:
+      - /tmp
+      - /var/run/postgresql
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          PGPASSWORD="$${POSTGRES_APP_PASSWORD}"
+          psql --host=127.0.0.1
+          --username="$${POSTGRES_APP_USER}"
+          --dbname="$${POSTGRES_DB}"
+          --no-password --quiet --tuples-only --no-align
+          --command='SELECT 1' >/dev/null
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+    stop_grace_period: 30s
+    networks:
+      - database
+
+volumes:
+  postgres_data:
+
+networks:
+  database:
+    driver: bridge

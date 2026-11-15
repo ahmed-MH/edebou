@@ -1,0 +1,153 @@
+{
+  "Metadata": {
+    "title": "EDebou — كل ما تحتاجه ببساطة",
+    "description": "متجر EDebou التونسي للتسوق بالتجزئة والجملة مع الدفع عند الاستلام."
+  },
+  "A11y": {
+    "skipToContent": "الانتقال إلى المحتوى الرئيسي",
+    "primaryNavigation": "التنقل الرئيسي",
+    "mobileNavigation": "التنقل عبر الهاتف",
+    "footerNavigation": "التنقل في تذييل الصفحة",
+    "languageNavigation": "اختيار اللغة"
+  },
+  "Header": {
+    "searchLabel": "البحث في الكتالوج",
+    "searchPlaceholder": "ابحث عن منتج",
+    "comingSoon": "الكتالوج",
+    "cartLabel": "عرض سلة التسوق",
+    "cartText": "السلة",
+    "openMenu": "فتح القائمة",
+    "closeMenu": "إغلاق القائمة",
+    "menuTitle": "القائمة",
+    "languageLabel": "اللغة",
+    "arabic": "العربية",
+    "french": "Français"
+  },
+  "Navigation": {
+    "home": "الرئيسية",
+    "categories": "الفئات",
+    "products": "المنتجات"
+  },
+  "Hero": {
+    "eyebrow": "بيع بالتجزئة والجملة في تونس",
+    "title": "كل ما تحتاجه، في مكان واحد.",
+    "description": "اكتشف تشكيلة مختارة للمنزل والحياة اليومية، بأسعار واضحة وتجربة تسوق بسيطة.",
+    "primaryCta": "اكتشف المنتجات",
+    "secondaryCta": "تصفّح الفئات",
+    "visualLabel": "لمحة عن عوالم EDebou",
+    "visualCaption": "تشكيلة واضحة لاحتياجاتك اليومية",
+    "visualItems": {
+      "technology": "التكنولوجيا",
+      "home": "المنزل",
+      "lifestyle": "الحياة اليومية",
+      "care": "العناية"
+    }
+  },
+  "Categories": {
+    "eyebrow": "كل الأساسيات",
+    "title": "اكتشف أقسامنا",
+    "description": "هيكلة كتالوج تجمع احتياجاتك اليومية ضمن تجربة واضحة ومتناسقة.",
+    "items": {
+      "electronics": "إلكترونيات",
+      "home": "المنزل",
+      "fashion": "الأزياء",
+      "beauty": "الجمال والعناية",
+      "sport": "الرياضة واللياقة",
+      "essentials": "مستلزمات يومية"
+    }
+  },
+  "Products": {
+    "eyebrow": "مختارات من الكتالوج",
+    "title": "أساسيات اخترناها لك",
+    "description": "اكتشف منتجات متوفرة بالقطعة أو بالكميات مع أسعار واضحة.",
+    "demoBadge": "كتالوج متاح",
+    "demoNoticeTitle": "أسعار واضحة حتى تأكيد الطلب",
+    "demoNoticeBody": "يتحقق الخادم دائمًا من السعر النهائي والتوفر عند إرسال الطلب.",
+    "cartUnavailable": "عرض المنتج",
+    "imageAlt": "صورة المنتج: {name}",
+    "items": {
+      "wirelessEarbuds": "سماعات لاسلكية",
+      "electricKettle": "غلاية كهربائية",
+      "dailyBackpack": "حقيبة ظهر يومية",
+      "dailyCareSet": "مجموعة عناية يومية"
+    }
+  },
+  "Catalog": {
+    "eyebrow": "كتالوج EDebou",
+    "title": "اكتشف كل ما تحتاجه بسهولة",
+    "description": "ابحث وصفِّ وقارن بين المنتجات المتوفرة للشراء بالقطعة أو بالكميات.",
+    "searchLabel": "البحث عن منتج",
+    "searchPlaceholder": "اسم المنتج أو المرجع",
+    "categoryLabel": "الفئة",
+    "allCategories": "كل الفئات",
+    "sortLabel": "الترتيب حسب",
+    "sort": {
+      "newest": "الأحدث",
+      "priceAsc": "السعر من الأقل إلى الأعلى",
+      "priceDesc": "السعر من الأعلى إلى الأقل"
+    },
+    "applyFilters": "تطبيق",
+    "clearFilters": "مسح عوامل التصفية",
+    "resultsCount": "{count} منتج",
+    "emptyTitle": "لم نعثر على منتجات",
+    "emptyDescription": "غيّر عبارة البحث أو عوامل التصفية لعرض منتجات أخرى.",
+    "errorTitle": "الكتالوج غير متاح مؤقتًا",
+    "errorDescription": "حاول مجددًا بعد قليل. لم يتم عرض أي تفاصيل تقنية.",
+    "retry": "إعادة المحاولة",
+    "paginationLabel": "صفحات الكتالوج",
+    "previousPage": "الصفحة السابقة",
+    "nextPage": "الصفحة التالية",
+    "pageSummary": "الصفحة {page} من {total}",
+    "viewProduct": "عرض المنتج",
+    "imageFallback": "لا توجد صورة متاحة"
+  },
+  "ProductDetail": {
+    "backToCatalog": "العودة إلى الكتالوج",
+    "categoryLabel": "الفئة",
+    "skuLabel": "المرجع",
+    "unitPriceLabel": "سعر الوحدة",
+    "descriptionTitle": "معلومات المنتج",
+    "quantityLabel": "الكمية",
+    "decreaseQuantity": "تقليل الكمية",
+    "increaseQuantity": "زيادة الكمية",
+    "pricingTitle": "أسعار حسب الكمية",
+    "pricingDescription": "تُعرض أفضل شريحة سعر متاحة بصفة إرشادية، ويعيد الخادم حساب السعر عند تأكيد الطلب.",
+    "fromQuantity": "ابتداءً من {quantity} وحدات",
+    "eachLabel": "للوحدة",
+    "selectedUnitPrice": "سعر الوحدة المحدد",
+    "totalLabel": "المجموع التقديري",
+    "addToCart": "أضف إلى السلة",
+    "addingToCart": "جارٍ الإضافة…",
+    "addedToCart": "تمت الإضافة إلى السلة",
+    "outOfStock": "هذا المنتج غير متوفر حاليًا.",
+    "noImage": "لا توجد صورة متاحة لهذا المنتج",
+    "notFoundTitle": "المنتج غير موجود",
+    "notFoundDescription": "هذا المنتج غير متاح أو لم يعد موجودًا في الكتالوج."
+  },
+  "Availability": {
+    "in_stock": "متوفر",
+    "low_stock": "كمية محدودة",
+    "out_of_stock": "غير متوفر"
+  },
+  "Footer": {
+    "description": "متجر تونسي عام صُمّم لتجربة بسيطة وواضحة وآمنة.",
+    "exploreTitle": "استكشف",
+    "informationTitle": "معلومات عامة",
+    "informationBody": "تونس · بيع بالتجزئة والجملة",
+    "legalTitle": "معلومات قانونية",
+    "futureLabel": "قريبًا",
+    "legal": {
+      "terms": "الشروط العامة",
+      "privacy": "الخصوصية",
+      "returns": "الإرجاع"
+    },
+    "rights": "جميع الحقوق محفوظة.",
+    "brandFallback": "الهوية الرسمية لـ EDebou."
+  },
+  "NotFound": {
+    "eyebrow": "خطأ 404",
+    "title": "هذه الصفحة غير موجودة.",
+    "description": "الصفحة المطلوبة غير متاحة أو لم يتم إنشاؤها بعد.",
+    "backHome": "العودة إلى الرئيسية"
+  }
+}
