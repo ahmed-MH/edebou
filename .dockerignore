@@ -1,0 +1,16 @@
+.git
+.github
+.next
+backups
+coverage
+node_modules
+storage
+.env
+.env.*
+!.env.example
+!.env.database.example
+!.env.oracle.example
+npm-debug.log*
+*.pem
+*.md
+!README.md

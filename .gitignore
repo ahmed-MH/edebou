@@ -39,6 +39,7 @@ yarn-error.log*
 .env*
 !.env.example
 !.env.database.example
+!.env.oracle.example
 
 # vercel
 .vercel
