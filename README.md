@@ -2,6 +2,9 @@
 
 EDebou est une boutique e-commerce tunisienne bilingue arabe/français avec catalogue, panier, commande à la livraison et back-office sécurisé. Le projet n'est pas encore homologué pour une ouverture publique : la supervision, le déploiement durci et une revue de sécurité indépendante restent nécessaires.
 
+Le déploiement Docker durci pour une VM Oracle Cloud est documenté dans
+[docs/ORACLE_CLOUD_DEPLOYMENT.md](docs/ORACLE_CLOUD_DEPLOYMENT.md).
+
 ## Périmètre actuel
 
 - Accueil arabe par défaut, en RTL, et accueil français en LTR.

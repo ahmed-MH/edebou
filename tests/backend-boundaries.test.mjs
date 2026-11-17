@@ -33,6 +33,8 @@ test("API routes preserve read-only media/catalog and authenticated admin writes
     "src/app/api/admin/product-images/route.ts",
     "src/app/api/categories/route.ts",
     "src/app/api/checkout-intents/route.ts",
+    "src/app/api/health/live/route.ts",
+    "src/app/api/health/ready/route.ts",
     "src/app/api/orders/route.ts",
     "src/app/api/product-images/[filename]/route.ts",
     "src/app/api/products/[slug]/route.ts",
@@ -132,6 +134,7 @@ test("browser-exposed environment variables cannot carry secrets or database set
   const filesToScan = [
     ".env.example",
     ".env.database.example",
+    ".env.oracle.example",
     "next.config.ts",
     ...(await collectFiles(join(projectRoot, "src"))).map((file) =>
       relative(projectRoot, file),

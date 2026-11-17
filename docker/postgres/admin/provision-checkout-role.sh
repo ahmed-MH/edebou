@@ -11,6 +11,9 @@ set -eu
 : "${POSTGRES_CHECKOUT_USER:?Checkout role provisioning refused: POSTGRES_CHECKOUT_USER is required.}"
 : "${POSTGRES_CHECKOUT_PASSWORD:?Checkout role provisioning refused: POSTGRES_CHECKOUT_PASSWORD is required.}"
 
+database_host=${POSTGRES_HOST:-127.0.0.1}
+database_port=${POSTGRES_PORT:-5432}
+
 case "$POSTGRES_CHECKOUT_USER" in
   *[!a-z0-9_]* | "" | postgres | edebou_catalog_reader | edebou_checkout_writer)
     echo "Checkout role provisioning refused: invalid POSTGRES_CHECKOUT_USER." >&2
@@ -41,7 +44,8 @@ if [ "$POSTGRES_CHECKOUT_USER" = "$POSTGRES_USER" ] || \
 fi
 
 PGPASSWORD="$POSTGRES_PASSWORD" psql \
-  --host=127.0.0.1 \
+  --host="$database_host" \
+  --port="$database_port" \
   --username="$POSTGRES_USER" \
   --dbname="$POSTGRES_DB" \
   --no-password \

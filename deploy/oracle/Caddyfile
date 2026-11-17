@@ -1,0 +1,28 @@
+{
+	email {$ACME_EMAIL}
+	admin off
+}
+
+{$DOMAIN} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age={$HSTS_MAX_AGE}"
+		-Server
+	}
+
+	log {
+		output stdout
+		format json
+	}
+
+	@internal_readiness path /api/health/ready
+	respond @internal_readiness 404
+
+	reverse_proxy app:3000 {
+		flush_interval -1
+		health_uri /api/health/ready
+		health_interval 30s
+		health_timeout 5s
+	}
+}

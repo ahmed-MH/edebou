@@ -1,0 +1,242 @@
+name: edebou-production
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+x-postgres-environment: &postgres-environment
+  POSTGRES_USER: ${POSTGRES_BOOTSTRAP_USER:?Set POSTGRES_BOOTSTRAP_USER in .env.oracle}
+  POSTGRES_PASSWORD: ${POSTGRES_BOOTSTRAP_PASSWORD:?Set POSTGRES_BOOTSTRAP_PASSWORD in .env.oracle}
+  POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB in .env.oracle}
+  POSTGRES_MIGRATION_USER: ${POSTGRES_MIGRATION_USER:?Set POSTGRES_MIGRATION_USER in .env.oracle}
+  POSTGRES_MIGRATION_PASSWORD: ${POSTGRES_MIGRATION_PASSWORD:?Set POSTGRES_MIGRATION_PASSWORD in .env.oracle}
+  POSTGRES_APP_USER: ${POSTGRES_APP_USER:?Set POSTGRES_APP_USER in .env.oracle}
+  POSTGRES_APP_PASSWORD: ${POSTGRES_APP_PASSWORD:?Set POSTGRES_APP_PASSWORD in .env.oracle}
+  POSTGRES_CHECKOUT_USER: ${POSTGRES_CHECKOUT_USER:?Set POSTGRES_CHECKOUT_USER in .env.oracle}
+  POSTGRES_CHECKOUT_PASSWORD: ${POSTGRES_CHECKOUT_PASSWORD:?Set POSTGRES_CHECKOUT_PASSWORD in .env.oracle}
+  POSTGRES_ADMIN_USER: ${POSTGRES_ADMIN_USER:?Set POSTGRES_ADMIN_USER in .env.oracle}
+  POSTGRES_ADMIN_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:?Set POSTGRES_ADMIN_PASSWORD in .env.oracle}
+  POSTGRES_SHADOW_DB: ${POSTGRES_SHADOW_DB:?Set POSTGRES_SHADOW_DB in .env.oracle}
+
+services:
+  postgres:
+    image: postgres:18.6-bookworm
+    restart: unless-stopped
+    shm_size: 128mb
+    environment:
+      <<: *postgres-environment
+      POSTGRES_INITDB_ARGS: >-
+        --auth-host=scram-sha-256
+        --auth-local=scram-sha-256
+        --encoding=UTF8
+        --locale=C.UTF-8
+    command:
+      - postgres
+      - -c
+      - password_encryption=scram-sha-256
+      - -c
+      - max_connections=60
+      - -c
+      - shared_buffers=${POSTGRES_SHARED_BUFFERS:-512MB}
+    volumes:
+      - postgres_data:/var/lib/postgresql
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+      - ./docker/postgres/admin:/opt/edebou-admin:ro
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+      - /var/run/postgresql:rw,nosuid,size=16m
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          PGPASSWORD="$${POSTGRES_APP_PASSWORD}"
+          psql --host=127.0.0.1
+          --username="$${POSTGRES_APP_USER}"
+          --dbname="$${POSTGRES_DB}"
+          --no-password --quiet --tuples-only --no-align
+          --command='SELECT 1' >/dev/null
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    stop_grace_period: 60s
+    mem_limit: ${POSTGRES_MEMORY_LIMIT:-3g}
+    cpus: ${POSTGRES_CPU_LIMIT:-1.5}
+    pids_limit: 200
+    security_opt:
+      - no-new-privileges:true
+    logging: *default-logging
+    networks:
+      - database
+
+  provision:
+    image: postgres:18.6-bookworm
+    user: postgres
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      <<: *postgres-environment
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+    volumes:
+      - ./docker/postgres/admin:/opt/edebou-admin:ro
+    entrypoint:
+      - /opt/edebou-admin/provision-runtime-roles.sh
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    logging: *default-logging
+    networks:
+      - database
+
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: migrator
+    restart: "no"
+    depends_on:
+      provision:
+        condition: service_completed_successfully
+    environment:
+      NODE_ENV: production
+      DATABASE_ENV_FILE: /dev/null
+      MIGRATION_DATABASE_URL: ${MIGRATION_DATABASE_URL:?Set MIGRATION_DATABASE_URL in .env.oracle}
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    logging: *default-logging
+    networks:
+      - database
+
+  volumes-init:
+    image: ${COMPOSE_PROJECT_NAME:-edebou-production}-app
+    user: root
+    restart: "no"
+    command:
+      - sh
+      - -eu
+      - -c
+      - >-
+        mkdir -p /app/storage/product-images /app/.next/cache &&
+        chown -R 1001:1001 /app/storage/product-images /app/.next/cache
+    volumes:
+      - product_images:/app/storage/product-images
+      - next_cache:/app/.next/cache
+    security_opt:
+      - no-new-privileges:true
+    logging: *default-logging
+
+  app:
+    image: ${COMPOSE_PROJECT_NAME:-edebou-production}-app
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner
+    restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      volumes-init:
+        condition: service_completed_successfully
+    environment:
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: "1"
+      NODE_OPTIONS: ${NODE_OPTIONS:---max-old-space-size=1536}
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env.oracle}
+      CHECKOUT_DATABASE_URL: ${CHECKOUT_DATABASE_URL:?Set CHECKOUT_DATABASE_URL in .env.oracle}
+      ADMIN_DATABASE_URL: ${ADMIN_DATABASE_URL:?Set ADMIN_DATABASE_URL in .env.oracle}
+      CHECKOUT_ALLOWED_ORIGINS: ${CHECKOUT_ALLOWED_ORIGINS:?Set CHECKOUT_ALLOWED_ORIGINS in .env.oracle}
+      CHECKOUT_IDEMPOTENCY_PEPPER: ${CHECKOUT_IDEMPOTENCY_PEPPER:?Set CHECKOUT_IDEMPOTENCY_PEPPER in .env.oracle}
+      CHECKOUT_IP_HASH_PEPPER: ${CHECKOUT_IP_HASH_PEPPER:?Set CHECKOUT_IP_HASH_PEPPER in .env.oracle}
+      CHECKOUT_TRUSTED_PROXY_HOPS: "1"
+      ADMIN_SESSION_HASH_PEPPER: ${ADMIN_SESSION_HASH_PEPPER:?Set ADMIN_SESSION_HASH_PEPPER in .env.oracle}
+      ADMIN_IP_HASH_PEPPER: ${ADMIN_IP_HASH_PEPPER:?Set ADMIN_IP_HASH_PEPPER in .env.oracle}
+      ADMIN_TRUSTED_PROXY_HOPS: "1"
+      ADMIN_SESSION_TTL_HOURS: ${ADMIN_SESSION_TTL_HOURS:-8}
+      PRODUCT_UPLOAD_DIR: /app/storage/product-images
+    expose:
+      - "3000"
+    volumes:
+      - product_images:/app/storage/product-images
+      - next_cache:/app/.next/cache
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: ${APP_MEMORY_LIMIT:-2g}
+    cpus: ${APP_CPU_LIMIT:-1.5}
+    pids_limit: 200
+    stop_grace_period: 30s
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - >-
+          fetch('http://127.0.0.1:3000/api/health/ready')
+          .then((response) => { if (!response.ok) process.exit(1) })
+          .catch(() => process.exit(1))
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    logging: *default-logging
+    networks:
+      - web
+      - database
+
+  caddy:
+    image: caddy:2.11.9-alpine
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      DOMAIN: ${DOMAIN:?Set DOMAIN in .env.oracle}
+      ACME_EMAIL: ${ACME_EMAIL:?Set ACME_EMAIL in .env.oracle}
+      HSTS_MAX_AGE: ${HSTS_MAX_AGE:-0}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./deploy/oracle/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=32m
+    mem_limit: ${CADDY_MEMORY_LIMIT:-512m}
+    cpus: ${CADDY_CPU_LIMIT:-0.5}
+    pids_limit: 100
+    security_opt:
+      - no-new-privileges:true
+    logging: *default-logging
+    networks:
+      - web
+
+volumes:
+  postgres_data:
+  product_images:
+  next_cache:
+  caddy_data:
+  caddy_config:
+
+networks:
+  web:
+    driver: bridge
+  database:
+    driver: bridge
+    internal: true
