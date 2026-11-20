@@ -19,7 +19,7 @@ Deux mutations publiques POST-only existent : création d'une commande et enregi
 - Le préfixe `NEXT_PUBLIC_` est interdit pour tout mot de passe, URL PostgreSQL, token, secret ou identifiant privé, car son contenu est intégrable au bundle navigateur.
 - `poweredByHeader` est désactivé afin de ne pas publier l'en-tête `X-Powered-By` par défaut.
 
-Un `npm audit` est un signal à analyser, pas une preuve à lui seul. Au 12 novembre 2026, `npm audit --omit=dev` ne signale aucune vulnérabilité de production. L'audit complet remonte 10 signalements Moderate, sans High ni Critical, tous transitifs dans la chaîne de lint et issus du même avis `minimatch` GHSA-g3hv-75wg-m249. npm ne propose pour l'instant que des downgrades majeurs vers ESLint 9 EOL ou Next.js 15 ; ils n'ont pas été appliqués et aucun `--force` n'a été utilisé. L'avis doit être réévalué dès que les dépendances amont publient une résolution compatible.
+Un `npm audit` est un signal à analyser, pas une preuve à lui seul. Au 20 novembre 2026, `npm audit --omit=dev` ne signale aucune vulnérabilité. `effect`, dépendance de l'outil Prisma, est verrouillé sur la version corrigée 3.22.1 par un override testé. L'audit complet conserve 7 signalements Moderate, sans High ni Critical, dans la chaîne de lint via `minimatch` GHSA-g3hv-75wg-m249. Aucun `--force` ni downgrade majeur n'a été appliqué.
 
 ### PostgreSQL local et moindre privilège
 
@@ -69,7 +69,10 @@ Pour le checkout :
 - la limite de débit est atomique et partagée via PostgreSQL. L'adresse client est extraite depuis la droite de `X-Forwarded-For` selon un nombre exact de proxies de confiance, puis HMACée ; aucune IP en clair n'est stockée. La production refuse une topologie à zéro proxy ;
 - les journaux d'erreur ne contiennent ni corps, ni adresse, ni téléphone, ni message SQL. Une indisponibilité de la configuration ou de PostgreSQL renvoie 503 et ne produit jamais de confirmation.
 
-Les API JSON sont exclues du proxy CSP destiné au HTML, mais reçoivent les en-têtes défensifs globaux et ajoutent `nosniff`. Cette exclusion ne doit pas être interprétée comme une exemption de sécurité.
+Les routes API métier traversent la politique d'hôtes du proxy. Elles reçoivent
+les en-têtes défensifs globaux et ajoutent `nosniff`; les contrôles propres à
+chaque mutation restent obligatoires et ne reposent jamais uniquement sur le
+proxy.
 
 La grille de l'accueil appelle également `catalogService` dans un composant serveur, avec une première page bornée à huit produits actifs. Elle ignore les entrées sans image et conserve les fixtures locales contrôlées si le service échoue, si le catalogue est vide ou si aucun résultat n'est affichable. Ce repli silencieux n'expose aucun détail de connexion dans le HTML, mais il ne constitue ni un contrôle de santé ni une garantie de disponibilité de PostgreSQL : les tests et la supervision de la base et de l'API restent séparés.
 
@@ -77,7 +80,10 @@ La grille de l'accueil appelle également `catalogService` dans un composant ser
 
 Le proxy applicatif génère un nonce avec `crypto.randomUUID()` pour chaque requête de page concernée, l'encode en base64, construit la `Content-Security-Policy`, puis transmet le nonce au rendu Next.js via les en-têtes de requête. La réponse reçoit la même CSP et `Cache-Control: private, no-store`, afin d'éviter de réutiliser une page avec le nonce d'une autre réponse.
 
-Le matcher couvre les pages applicatives, mais exclut les chemins `api`, `_next`, `_vercel` et les fichiers possédant une extension. Les API publiques traitent donc explicitement leurs en-têtes et leur cache au lieu de les supposer hérités du proxy.
+Le matcher couvre les pages applicatives et les API afin d'imposer la
+séparation entre le domaine public et le sous-domaine admin. Il exclut les
+fichiers statiques et l'optimiseur d'images, également filtrés par les routes
+Caddy. Les API traitent toujours explicitement leurs en-têtes et leur cache.
 
 En production :
 
@@ -119,9 +125,14 @@ La configuration Next.js ajoute, en complément de la CSP :
 
 ### Administration authentifiée
 
-`/admin/login` est public, mais aucune donnée métier n'y est chargée. Les pages sous `/admin` exigent une session aléatoire stockée uniquement sous forme HMAC en base et liée au navigateur ; le cookie est `HttpOnly`, `SameSite=Strict`, `Secure` en production et expire au plus tard après 24 heures (8 heures par défaut).
+`/admin/login` n'est exposé que sur le sous-domaine admin et ne charge aucune
+donnée métier. Les pages sous `/admin` exigent une session aléatoire stockée
+uniquement sous forme HMAC en base et liée au navigateur ; le cookie hôte
+`__Host-` n'a pas d'attribut `Domain`, est `HttpOnly`, `SameSite=Strict`,
+`Secure` en production et expire au plus tard après 24 heures (8 heures par
+défaut).
 
-Les tentatives de connexion sont limitées dans PostgreSQL, les comptes sont temporairement verrouillés après échecs répétés et une connexion réussie révoque l'ancienne session du compte. Chaque lecture appelle le DAL de session ; chaque Server Action revérifie session et rôle. Les transitions de commande sont strictes, l'annulation restaure le stock une seule fois et toute mutation est inscrite dans le journal d'audit.
+Les tentatives de connexion sont limitées dans PostgreSQL, les comptes sont temporairement verrouillés après échecs répétés et une connexion réussie révoque l'ancienne session du compte. Chaque lecture appelle le DAL de session ; chaque Server Action revérifie session et rôle, ainsi que l'égalité exacte entre `Origin`, l'origine admin configurée et le `Host`/`X-Forwarded-Host` produit par Caddy. Les transitions de commande sont strictes, l'annulation restaure le stock une seule fois et toute mutation est inscrite dans le journal d'audit.
 
 Les mots de passe sont hachés avec `scrypt` et sel aléatoire. Leur création est réservée au script opérateur `admin:create`, exécuté avec le rôle de migration ; le runtime admin ne reçoit volontairement pas le droit d'insérer ou de supprimer des utilisateurs.
 

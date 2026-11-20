@@ -1,0 +1,16 @@
+[Unit]
+Description=EDebou public application stack
+Requires=docker.service edebou-firewall.service
+After=docker.service edebou-firewall.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/edebou
+ExecStart=/usr/bin/docker compose --env-file /opt/edebou/.env.oracle --file /opt/edebou/compose.oracle.yaml up -d postgres provision migrate volumes-init app caddy
+ExecReload=/usr/bin/docker compose --env-file /opt/edebou/.env.oracle --file /opt/edebou/compose.oracle.yaml up -d postgres provision migrate volumes-init app caddy
+TimeoutStartSec=900
+
+[Install]
+WantedBy=multi-user.target

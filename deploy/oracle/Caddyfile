@@ -3,18 +3,19 @@
 	admin off
 }
 
-{$DOMAIN} {
-	encode zstd gzip
-
+(security_headers) {
 	header {
 		Strict-Transport-Security "max-age={$HSTS_MAX_AGE}"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
 		-Server
 	}
+}
 
-	log {
-		output stdout
-		format json
-	}
+(app_proxy) {
+	encode zstd gzip
+	import security_headers
 
 	@internal_readiness path /api/health/ready
 	respond @internal_readiness 404
@@ -25,4 +26,39 @@
 		health_interval 30s
 		health_timeout 5s
 	}
+}
+
+{$WWW_DOMAIN} {
+	import security_headers
+	log {
+		output stdout
+		format json
+	}
+	redir https://{$PUBLIC_DOMAIN}{uri} permanent
+}
+
+{$PUBLIC_DOMAIN} {
+	log {
+		output stdout
+		format json
+	}
+	@admin_surface path /admin /admin/* /api/admin /api/admin/*
+	respond @admin_surface 404
+	import app_proxy
+}
+
+{$ADMIN_DOMAIN} {
+	log {
+		output stdout
+		format json
+	}
+	@admin_root path /
+	redir @admin_root /admin/login 308
+
+	@admin_surface path /admin /admin/* /api/admin /api/admin/* /api/product-images/* /_next/* /brand/* /favicon.ico /icon.png /robots.txt
+	handle @admin_surface {
+		import app_proxy
+	}
+
+	respond 404
 }

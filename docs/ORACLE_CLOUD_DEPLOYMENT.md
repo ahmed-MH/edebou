@@ -12,8 +12,8 @@ l'application.
 - une VM Ubuntu 24.04 ARM64, avec au moins 2 OCPU, 12 Go de RAM et 40 Go de
   stockage ;
 - Docker Engine avec le plugin Docker Compose ;
-- un domaine public dont l'enregistrement `A` pointe vers l'IP publique de la
-  VM ;
+- le domaine public, le sous-domaine admin et `www` configurés comme décrit
+  dans [PUBLIC_DOMAIN_ROLLOUT.md](PUBLIC_DOMAIN_ROLLOUT.md) ;
 - une adresse e-mail valide pour les certificats ACME ;
 - les ports TCP `80` et `443`, ainsi que UDP `443`, autorisés dans le Network
   Security Group OCI ;
@@ -43,11 +43,11 @@ docker run --rm \
   --volume "$PWD:/app" \
   --workdir /app \
   node:22-bookworm-slim \
-  node scripts/generate-oracle-env.mjs shop.example.com admin@example.com
+node scripts/generate-oracle-env.mjs example.com admin@example.com
 ```
 
 Si Node.js 22 est déjà installé sur la VM, la commande équivalente est
-`npm run oracle:env -- shop.example.com admin@example.com`.
+`npm run oracle:env -- example.com admin@example.com`.
 
 Le script crée `.env.oracle` avec des secrets distincts et les permissions
 `0600`. Remplacer les deux valeurs d'exemple par le vrai domaine et l'e-mail.
@@ -116,7 +116,7 @@ docker compose --env-file .env.oracle -f compose.oracle.yaml run --rm --entrypoi
 Le back-office est ensuite disponible sur :
 
 ```text
-https://shop.example.com/admin/login
+https://admin.example.com/admin/login
 ```
 
 ## 5. Mise à jour
@@ -185,7 +185,7 @@ reste désactivé jusqu'à sa validation explicite selon la section 3.
 
 ## 8. Déploiement sans domaine confirmé
 
-Ne pas remplacer `DOMAIN` par l'adresse IP et ne pas ouvrir temporairement le
+Ne pas remplacer `PUBLIC_DOMAIN` par l'adresse IP et ne pas ouvrir temporairement le
 checkout ou le back-office en HTTP. Tant qu'un vrai domaine contrôlé n'est pas
 confirmé et pointé vers `129.151.228.254`, préparer la VM et les images, mais ne
 pas publier Caddy. Pour un test privé, utiliser un tunnel SSH vers l'application
@@ -206,8 +206,7 @@ nouveau contrôle de vulnérabilités.
 
 ## 10. Risques connus et critères d'ouverture
 
-Consulter [PRODUCTION_READINESS.md](PRODUCTION_READINESS.md) avant chaque mise
-en production. Une alerte npm haute sans version corrigée est actuellement
-suivie ; son paquet parent de surveillance de fichiers n'est pas copié dans
-l'image Next.js standalone, mais elle reste un risque de chaîne de build à
-réévaluer dès qu'un correctif amont est publié.
+Consulter [PRODUCTION_READINESS.md](PRODUCTION_READINESS.md) et
+[PUBLIC_DOMAIN_ROLLOUT.md](PUBLIC_DOMAIN_ROLLOUT.md) avant chaque mise en
+production. L'audit de production doit être à zéro vulnérabilité High ou
+Critical et les alertes d'outillage restantes doivent être documentées.

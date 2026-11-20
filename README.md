@@ -4,6 +4,8 @@ EDebou est une boutique e-commerce tunisienne bilingue arabe/français avec cata
 
 Le déploiement Docker durci pour une VM Oracle Cloud est documenté dans
 [docs/ORACLE_CLOUD_DEPLOYMENT.md](docs/ORACLE_CLOUD_DEPLOYMENT.md).
+L'ouverture de `edebou.live` et l'isolation de `admin.edebou.live` suivent le
+runbook [docs/PUBLIC_DOMAIN_ROLLOUT.md](docs/PUBLIC_DOMAIN_ROLLOUT.md).
 
 ## Périmètre actuel
 

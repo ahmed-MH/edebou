@@ -138,6 +138,7 @@ test("admin image uploads require same-origin CSRF protection and managed paths"
     {
       method: "POST",
       headers: {
+        Host: "localhost:3000",
         Origin: "http://localhost:3000",
         "Sec-Fetch-Site": "same-origin",
         [ADMIN_UPLOAD_CSRF_HEADER]: ADMIN_UPLOAD_CSRF_VALUE,
@@ -150,6 +151,7 @@ test("admin image uploads require same-origin CSRF protection and managed paths"
       new Request("http://localhost:3000/api/admin/product-images", {
         method: "POST",
         headers: {
+          Host: "localhost:3000",
           Origin: "https://attacker.example",
           [ADMIN_UPLOAD_CSRF_HEADER]: ADMIN_UPLOAD_CSRF_VALUE,
         },

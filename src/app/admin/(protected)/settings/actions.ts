@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { updateStoreSettingsSchema } from "@/lib/admin/settings-input";
 import { requireAdminSession } from "@/lib/admin/session";
+import { assertAdminMutationRequest } from "@/lib/admin/request-security";
 import { getAdminPrismaClient } from "@/lib/db/admin-prisma";
 
 export interface SettingsUpdateState {
@@ -19,6 +20,7 @@ export async function updateSettingsAction(
   _previousState: SettingsUpdateState,
   formData: FormData,
 ): Promise<SettingsUpdateState> {
+  await assertAdminMutationRequest();
   const identity = await requireAdminSession();
   if (identity.role !== "OWNER") {
     return {

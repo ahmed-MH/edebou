@@ -11,6 +11,7 @@ import {
 } from "@/lib/admin/catalog-input";
 import { deleteUploadedProductImages } from "@/lib/admin/product-images";
 import { getAdminPrismaClient } from "@/lib/db/admin-prisma";
+import { assertAdminMutationRequest } from "@/lib/admin/request-security";
 import { parseTunisianDinarsToMillimes } from "@/lib/money";
 import { requireAdminSession } from "@/lib/admin/session";
 
@@ -30,6 +31,7 @@ export interface CatalogCreateState {
 }
 
 async function requireAdminMutation() {
+  await assertAdminMutationRequest();
   const identity = await requireAdminSession();
   if (identity.role === "VIEWER") {
     throw new Error("ADMIN_FORBIDDEN");
