@@ -1,0 +1,13 @@
+[Unit]
+Description=EDebou Docker ingress firewall
+Requires=docker.service
+After=docker.service network-online.target
+Before=edebou-stack.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/edebou-docker-firewall
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

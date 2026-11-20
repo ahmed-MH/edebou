@@ -1,10 +1,10 @@
 # Revue de préparation à la production
 
-Dernière revue locale : 2026-11-17.
+Dernière revue locale : 2026-11-20.
 
 ## Contrôles validés
 
-- lint, TypeScript, 55 tests et validation Prisma ;
+- lint, TypeScript, 61 tests et validation Prisma ;
 - build Next.js 16 standalone et image Linux ARM64 non privilégiée ;
 - PostgreSQL 18.6 avec SCRAM, rôles distincts catalogue/checkout/admin/migration
   et aucun port de base publié ;
@@ -18,35 +18,24 @@ Dernière revue locale : 2026-11-17.
 - restauration réelle dans une base PostgreSQL jetable, sans connexion à la
   production.
 
-## Risque dépendance ouvert
+## État des dépendances
 
-`npm audit --omit=dev` signale deux entrées hautes liées à
-`next-intl -> @parcel/watcher -> picomatch` :
-[GHSA-fc5q-39xc-vjpf](https://github.com/advisories/GHSA-fc5q-39xc-vjpf).
-Au 2026-11-17, le registre npm publie encore `picomatch@4.0.7`, inclus dans la
-plage affectée, sans version corrigée disponible. `npm audit fix --dry-run` ne
-propose pas de remplacement effectif.
+`npm audit --omit=dev` ne signale aucune vulnérabilité. L'avis High
+`GHSA-7589-6fvf-x4pw` affectant la dépendance `effect` de l'outil Prisma est
+corrigé par un override verrouillé sur `effect@3.22.1`; `npm ci`, la génération
+Prisma, les tests et le build ont été rejoués après ce changement.
 
-`@parcel/watcher` n'est pas présent dans le runtime standalone livré ; il reste
-dans la chaîne d'installation/build. L'image contient aussi une copie compilée
-de `picomatch` fournie par Next.js, sans métadonnée de version, que l'audit npm
-n'associe pas à cet avis. Mesures temporaires : builds depuis des commits de
-confiance, aucune donnée utilisateur transmise à des motifs de build, image
-runtime minimale, suivi de `next`, `next-intl`, `@parcel/watcher` et
-`picomatch`. Réexécuter l'audit et reconstruire dès publication d'un correctif.
-
-L'audit complet (outils de développement inclus) compte 10 alertes hautes et 6
-modérées, aucune critique, après passage d'ESLint 10.14.0 à 10.15.0. Elles
-proviennent des chaînes de glob de `eslint-config-next`, TypeScript ESLint et du
-watcher ci-dessus. La suggestion automatique restante rétrograderait
-`eslint-config-next` vers Next 14 et n'est donc ni sûre ni compatible. Les
-commandes lint, typecheck et build restent validées ; réévaluer à chaque mise à
-jour amont.
+L'audit complet conserve 7 alertes Moderate dans la chaîne ESLint/TypeScript
+ESLint via `minimatch` (`GHSA-g3hv-75wg-m249`), sans High ni Critical. Elles ne
+sont pas copiées dans l'image runtime. Elles restent à réévaluer à chaque mise
+à jour amont, sans appliquer de downgrade ou de `npm audit fix --force`.
 
 ## Portes obligatoires avant ouverture publique
 
 - fusionner une PR revue dans `main` et déployer exactement son SHA ;
 - confirmer un domaine contrôlé et pointer son `A` vers l'IP OCI ;
+- appliquer et vérifier la séparation d'hôtes décrite dans
+  [PUBLIC_DOMAIN_ROLLOUT.md](PUBLIC_DOMAIN_ROLLOUT.md) ;
 - limiter SSH à l'IP d'administration dans un NSG OCI et ne jamais ouvrir 5432 ;
 - valider le certificat, les redirections, le checkout et les cookies admin en
   HTTPS avant d'activer HSTS ;

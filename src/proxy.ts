@@ -1,5 +1,13 @@
 import { type NextRequest, NextResponse } from "next/server";
 
+import {
+  classifyRequestSurface,
+  getAppHosts,
+  getAppOrigins,
+  isAdminPath,
+  isAllowedAdminSurfacePath,
+} from "@/lib/host-policy";
+
 function createContentSecurityPolicy(nonce: string): string {
   const isDevelopment = process.env.NODE_ENV === "development";
 
@@ -37,6 +45,53 @@ export function proxy(request: NextRequest) {
   const contentSecurityPolicy = createContentSecurityPolicy(nonce);
   const requestHeaders = new Headers(request.headers);
   const { pathname } = request.nextUrl;
+  const origins = getAppOrigins();
+  const forwardedHost =
+    request.headers.get("x-forwarded-host") ?? request.headers.get("host");
+  const surface = classifyRequestSurface(
+    forwardedHost,
+    pathname,
+    getAppHosts(origins),
+  );
+
+  if (surface === "unknown") {
+    return new NextResponse(null, {
+      status: 421,
+      headers: { "Cache-Control": "private, no-store" },
+    });
+  }
+  if (surface === "internal-health") return NextResponse.next();
+
+  if (surface === "public-www") {
+    const canonicalUrl = new URL(
+      request.nextUrl.pathname + request.nextUrl.search,
+      origins.publicOrigin,
+    );
+    return NextResponse.redirect(canonicalUrl, 308);
+  }
+
+  if (surface === "public" && isAdminPath(pathname)) {
+    return new NextResponse(null, {
+      status: 404,
+      headers: { "Cache-Control": "private, no-store" },
+    });
+  }
+
+  if (surface === "admin") {
+    if (pathname === "/") {
+      return NextResponse.redirect(
+        new URL("/admin/login", origins.adminOrigin),
+        308,
+      );
+    }
+    if (!isAllowedAdminSurfacePath(pathname)) {
+      return new NextResponse(null, {
+        status: 404,
+        headers: { "Cache-Control": "private, no-store" },
+      });
+    }
+  }
+
   const isPrefixedArabic = pathname === "/ar" || pathname.startsWith("/ar/");
 
   if (isPrefixedArabic) {
@@ -76,5 +131,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!api|_next|_vercel|.*\\..*).*)"],
+  matcher: ["/((?!_next/static|_next/image|_vercel|.*\\..*).*)"],
 };

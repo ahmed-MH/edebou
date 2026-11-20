@@ -9,26 +9,26 @@ function fail(message) {
   process.exit(1);
 }
 
-const domain = process.argv[2]?.trim().toLowerCase();
+const publicDomain = process.argv[2]?.trim().toLowerCase();
 const acmeEmail = process.argv[3]?.trim().toLowerCase();
 
-if (!domain || !acmeEmail) {
-  fail("Usage: npm run oracle:env -- shop.example.com admin@example.com");
+if (!publicDomain || !acmeEmail) {
+  fail("Usage: npm run oracle:env -- example.com admin@example.com");
 }
 
 let parsedDomain;
 try {
-  parsedDomain = new URL(`https://${domain}`);
+  parsedDomain = new URL(`https://${publicDomain}`);
 } catch {
   fail("The domain name is invalid.");
 }
 
 if (
-  parsedDomain.hostname !== domain ||
+  parsedDomain.hostname !== publicDomain ||
   parsedDomain.pathname !== "/" ||
-  domain === "localhost" ||
-  isIP(domain) !== 0 ||
-  !domain.includes(".")
+  publicDomain === "localhost" ||
+  isIP(publicDomain) !== 0 ||
+  !publicDomain.includes(".")
 ) {
   fail("Provide a public hostname only, without a protocol, port, or path.");
 }
@@ -46,6 +46,8 @@ try {
 }
 
 const secret = () => randomBytes(32).toString("hex");
+const adminDomain = `admin.${publicDomain}`;
+const wwwDomain = `www.${publicDomain}`;
 const credentials = {
   bootstrap: secret(),
   migration: secret(),
@@ -58,7 +60,11 @@ const databaseUrl = (user, password) =>
   `postgresql://${user}:${password}@postgres:5432/edebou?sslmode=disable`;
 
 const contents = `# EDebou production secrets for Oracle Cloud. Never commit this file.
-DOMAIN=${domain}
+PUBLIC_DOMAIN=${publicDomain}
+ADMIN_DOMAIN=${adminDomain}
+WWW_DOMAIN=${wwwDomain}
+PUBLIC_APP_ORIGIN=https://${publicDomain}
+ADMIN_APP_ORIGIN=https://${adminDomain}
 ACME_EMAIL=${acmeEmail}
 HSTS_MAX_AGE=0
 
@@ -80,7 +86,7 @@ DATABASE_URL=${databaseUrl("edebou_catalog", credentials.catalog)}
 CHECKOUT_DATABASE_URL=${databaseUrl("edebou_checkout", credentials.checkout)}
 ADMIN_DATABASE_URL=${databaseUrl("edebou_admin", credentials.admin)}
 
-CHECKOUT_ALLOWED_ORIGINS=https://${domain}
+CHECKOUT_ALLOWED_ORIGINS=https://${publicDomain}
 CHECKOUT_IDEMPOTENCY_PEPPER=${secret()}
 CHECKOUT_IP_HASH_PEPPER=${secret()}
 ADMIN_SESSION_HASH_PEPPER=${secret()}

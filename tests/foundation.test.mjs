@@ -138,6 +138,8 @@ test("runtime and database environment templates keep privileged secrets separat
     "DATABASE_URL",
     "CHECKOUT_DATABASE_URL",
     "ADMIN_DATABASE_URL",
+    "PUBLIC_APP_ORIGIN",
+    "ADMIN_APP_ORIGIN",
     "CHECKOUT_ALLOWED_ORIGINS",
     "CHECKOUT_IDEMPOTENCY_PEPPER",
     "CHECKOUT_IP_HASH_PEPPER",

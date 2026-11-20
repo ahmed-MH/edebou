@@ -10,6 +10,7 @@ import {
 } from "@/lib/admin/auth";
 import { getAdminSecurityConfig } from "@/lib/admin/config";
 import { resolveAdminClientToken } from "@/lib/admin/security";
+import { assertAdminMutationRequest } from "@/lib/admin/request-security";
 import { setAdminSessionCookie } from "@/lib/admin/session";
 
 const loginSchema = z
@@ -36,6 +37,7 @@ export async function loginAdminAction(
   }
 
   try {
+    await assertAdminMutationRequest();
     const requestHeaders = await headers();
     const config = getAdminSecurityConfig();
     const session = await authenticateAdmin({

@@ -1,5 +1,7 @@
 import "server-only";
 
+import { getAppOrigins } from "@/lib/host-policy";
+
 const MINIMUM_SECRET_LENGTH = 32;
 const MAXIMUM_TRUSTED_PROXY_HOPS = 5;
 
@@ -11,6 +13,7 @@ export class AdminConfigurationError extends Error {
 }
 
 export interface AdminSecurityConfig {
+  readonly appOrigin: string;
   readonly ipHashPepper: string;
   readonly sessionHashPepper: string;
   readonly sessionTtlHours: number;
@@ -64,6 +67,7 @@ export function getAdminSecurityConfig(): AdminSecurityConfig {
   }
 
   return {
+    appOrigin: getAppOrigins().adminOrigin,
     sessionHashPepper,
     ipHashPepper,
     sessionTtlHours: parseSessionTtlHours(
