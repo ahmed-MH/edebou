@@ -82,6 +82,19 @@ test("default-locale routes use shared UI and remain canonically unprefixed", as
   assert.doesNotMatch(proxy, /NextResponse\.rewrite/);
 });
 
+test("the production home page renders only live catalog products", async () => {
+  const [rootPage, localePage, productGrid] = await Promise.all([
+    readProjectFile("src/app/page.tsx"),
+    readProjectFile("src/app/[locale]/page.tsx"),
+    readProjectFile("src/components/storefront/product-grid.tsx"),
+  ]);
+
+  assert.match(rootPage, /export const dynamic = "force-dynamic"/);
+  assert.match(localePage, /export const dynamic = "force-dynamic"/);
+  assert.match(productGrid, /catalogService\.listProducts/);
+  assert.doesNotMatch(productGrid, /demoProducts|@\/data\/demo\/products/);
+});
+
 test("application source avoids unsafe HTML and dynamic code execution", async () => {
   const sourceFiles = (await collectFiles(join(projectRoot, "src"))).filter(
     (file) => /\.(?:ts|tsx)$/.test(file),
