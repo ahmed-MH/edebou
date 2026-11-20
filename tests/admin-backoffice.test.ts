@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import { calculateIntentScore } from "../src/lib/admin/intent-score";
@@ -192,4 +193,18 @@ test("store settings accept a bounded name and Tunisian delivery fee", () => {
     }).success,
     false,
   );
+});
+
+test("production migrations initialize store settings without overwriting owner values", async () => {
+  const migration = await readFile(
+    new URL(
+      "../prisma/migrations/20261120193000_initialize_store_settings/migration.sql",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+
+  assert.match(migration, /VALUES \(1, 8000, 'EDebou'\)/);
+  assert.match(migration, /ON CONFLICT \("id"\) DO NOTHING/);
+  assert.doesNotMatch(migration, /DO UPDATE|DELETE|TRUNCATE/);
 });
