@@ -6,11 +6,12 @@ import {
   Map as MapIcon,
   MapPin,
   Phone,
+  ShoppingBag,
   Truck,
   UserRound,
   type LucideIcon,
 } from "lucide-react";
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 
 import { commerceCopy } from "@/components/cart/commerce-copy";
 import { createIdempotencyKey } from "@/components/cart/cart-state";
@@ -115,20 +116,28 @@ function DirectOrderField({
 
 export function ProductDirectOrderForm({
   availability,
+  callUsLabel,
+  contactPhone,
   deliveryFeeMillimes,
   locale,
+  orderNowLabel,
   productName,
   quantity,
+  selectionControls,
   slug,
-  unitPriceMillimes,
+  subtotalMillimes,
 }: {
   readonly availability: "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK";
+  readonly callUsLabel: string;
+  readonly contactPhone: string | null;
   readonly deliveryFeeMillimes: number | null;
   readonly locale: AppLocale;
+  readonly orderNowLabel: string;
   readonly productName: string;
   readonly quantity: number;
+  readonly selectionControls: ReactNode;
   readonly slug: string;
-  readonly unitPriceMillimes: number;
+  readonly subtotalMillimes: number;
 }) {
   const copy = commerceCopy[locale];
   const governorates = getGovernorates(locale);
@@ -137,20 +146,38 @@ export function ProductDirectOrderForm({
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [confirmation, setConfirmation] = useState<OrderConfirmation | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  const confirmationRef = useRef<HTMLElement>(null);
+  const submitErrorRef = useRef<HTMLDivElement>(null);
   const attemptRef = useRef<{ fingerprint: string; key: string } | null>(null);
   const pendingRef = useRef(false);
-  const subtotalMillimes = unitPriceMillimes * quantity;
   const totalMillimes =
     deliveryFeeMillimes === null
       ? null
       : subtotalMillimes + deliveryFeeMillimes;
   const isOutOfStock = availability === "OUT_OF_STOCK";
+  const isFormComplete = Object.values(form).every(
+    (value) => value.trim().length > 0,
+  );
   const intentTracking = useCheckoutIntentTracking({
     customer: form,
     items: [{ productSlug: slug, quantity }],
     locale,
     source: "PRODUCT",
   });
+
+  useEffect(() => {
+    if (confirmation) {
+      confirmationRef.current?.focus({ preventScroll: true });
+      confirmationRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [confirmation]);
+
+  useEffect(() => {
+    if (submitError) {
+      submitErrorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [submitError]);
 
   const updateField = (field: FormField, value: string) => {
     setForm((current) => ({ ...current, [field]: value }));
@@ -182,6 +209,13 @@ export function ProductDirectOrderForm({
         }
       }
       setErrors(nextErrors);
+      const firstInvalidField = validated.error.issues[0]?.path[0];
+      if (typeof firstInvalidField === "string" && firstInvalidField in emptyForm) {
+        const control = formRef.current?.elements.namedItem(firstInvalidField);
+        if (control instanceof HTMLElement) {
+          control.focus();
+        }
+      }
       return;
     }
 
@@ -229,8 +263,10 @@ export function ProductDirectOrderForm({
     return (
       <section
         id="direct-order"
+        ref={confirmationRef}
+        tabIndex={-1}
         aria-live="polite"
-        className="border-t border-ink/70 pt-7"
+        className="scroll-mt-24 border-t border-ink/70 pt-7"
       >
         <CheckCircle2 className="size-9 text-emerald-600" aria-hidden="true" />
         <p className="mt-4 text-xs font-extrabold uppercase tracking-[0.16em] text-emerald-700">
@@ -266,18 +302,19 @@ export function ProductDirectOrderForm({
   }
 
   return (
-    <section id="direct-order" className="border-t border-ink/70 pt-7">
-      <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-brand">
+    <>
+    <section id="direct-order" className="scroll-mt-24 rounded-xl border border-border bg-white p-4 shadow-sm sm:p-6">
+      <p className="text-sm font-bold text-brand">
         {copy.checkout.directOrderEyebrow}
       </p>
-      <h2 className="mt-2 text-2xl font-black tracking-tight text-ink">
+      <h2 className="mt-1 text-2xl font-black tracking-tight text-ink">
         {copy.checkout.directOrderTitle}
       </h2>
-      <p className="mt-2 text-sm leading-6 text-muted">
+      <p className="mt-2 text-base leading-7 text-muted">
         {copy.checkout.directOrderDescription}
       </p>
 
-      <form noValidate onSubmit={handleSubmit} className="mt-6 grid gap-5">
+      <form id="product-direct-order-form" ref={formRef} noValidate onSubmit={handleSubmit} className="mt-6 grid gap-5">
         <DirectOrderField
           field="fullName"
           label={copy.checkout.fields.fullName}
@@ -384,6 +421,8 @@ export function ProductDirectOrderForm({
           ) : null}
         </label>
 
+        {selectionControls}
+
         <fieldset className="border border-emerald-200 bg-emerald-50 p-4">
           <legend className="px-1 text-sm font-extrabold text-ink">
             {copy.checkout.paymentTitle}
@@ -473,6 +512,7 @@ export function ProductDirectOrderForm({
 
         {submitError ? (
           <div
+            ref={submitErrorRef}
             role="alert"
             aria-live="assertive"
             className="bg-brand-soft p-3 text-sm font-bold text-brand"
@@ -480,18 +520,42 @@ export function ProductDirectOrderForm({
             {submitError}
           </div>
         ) : null}
-
-        <button
-          type="submit"
-          disabled={submitting || isOutOfStock || deliveryFeeMillimes === null}
-          className="order-cta-attract inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-sm bg-brand px-5 text-sm font-extrabold uppercase tracking-[0.12em] text-white transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:bg-muted"
-        >
-          {submitting ? (
-            <LoaderCircle className="size-5 animate-spin" aria-hidden="true" />
-          ) : null}
-          {submitting ? copy.checkout.submitting : copy.checkout.submit}
-        </button>
       </form>
     </section>
+    {!isOutOfStock ? (
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-white/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_30px_rgb(17_24_39/10%)] backdrop-blur">
+        <div className="mx-auto flex max-w-3xl items-center">
+          {isFormComplete ? (
+            <button
+              type="submit"
+              form="product-direct-order-form"
+              disabled={submitting || deliveryFeeMillimes === null}
+              className="order-cta-attract inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-sm bg-brand px-5 text-sm font-extrabold uppercase tracking-[0.12em] text-white transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:bg-muted"
+            >
+              {submitting ? <LoaderCircle className="size-5 animate-spin" aria-hidden="true" /> : null}
+              <span aria-live="polite">{submitting ? copy.checkout.submitting : copy.checkout.submit}</span>
+            </button>
+          ) : (
+            <a
+              href="#direct-order"
+              className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand px-4 text-center text-base font-bold text-white hover:bg-brand-dark"
+            >
+              <ShoppingBag className="size-5" aria-hidden="true" />
+              {orderNowLabel}
+            </a>
+          )}
+          {contactPhone ? (
+            <a
+              href={`tel:${contactPhone}`}
+              aria-label={callUsLabel}
+              className="ms-3 inline-flex size-12 shrink-0 items-center justify-center rounded-xl border border-brand text-brand hover:bg-brand-soft"
+            >
+              <Phone className="size-6" aria-hidden="true" />
+            </a>
+          ) : null}
+        </div>
+      </div>
+    ) : null}
+    </>
   );
 }

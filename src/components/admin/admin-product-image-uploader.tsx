@@ -1,6 +1,6 @@
 "use client";
 
-import { ImagePlus, LoaderCircle, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ImagePlus, LoaderCircle, Trash2 } from "lucide-react";
 import { useId, useState } from "react";
 
 const MAX_IMAGES = 8;
@@ -10,6 +10,7 @@ const placeholderPath = "/demo/product-placeholder.svg";
 interface UploadedImage {
   readonly originalName: string;
   readonly path: string;
+  readonly persisted?: boolean;
 }
 
 function readUploadResponse(value: unknown): readonly UploadedImage[] | null {
@@ -38,11 +39,13 @@ function readUploadResponse(value: unknown): readonly UploadedImage[] | null {
 
 export function AdminProductImageUploader({
   serverError,
+  initialImages = [],
 }: {
   readonly serverError?: string;
+  readonly initialImages?: readonly UploadedImage[];
 }) {
   const inputId = useId();
-  const [images, setImages] = useState<readonly UploadedImage[]>([]);
+  const [images, setImages] = useState<readonly UploadedImage[]>(initialImages);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -87,6 +90,10 @@ export function AdminProductImageUploader({
 
   async function remove(image: UploadedImage): Promise<void> {
     setError(null);
+    if (image.persisted) {
+      setImages((current) => current.filter((candidate) => candidate.path !== image.path));
+      return;
+    }
     try {
       const response = await fetch("/api/admin/product-images", {
         method: "DELETE",
@@ -109,6 +116,17 @@ export function AdminProductImageUploader({
     }
   }
 
+  function move(path: string, direction: -1 | 1) {
+    setImages((current) => {
+      const index = current.findIndex((image) => image.path === path);
+      const nextIndex = index + direction;
+      if (index < 0 || nextIndex < 0 || nextIndex >= current.length) return current;
+      const reordered = [...current];
+      [reordered[index], reordered[nextIndex]] = [reordered[nextIndex], reordered[index]];
+      return reordered;
+    });
+  }
+
   const submittedImages =
     images.length > 0
       ? images
@@ -129,7 +147,7 @@ export function AdminProductImageUploader({
           <p className="font-black text-zinc-950">Photos du produit</p>
           <p className="mt-1 text-sm leading-6 text-zinc-500">
             Jusqu’à 8 photos depuis votre téléphone ou ordinateur. Elles sont
-            réorientées et optimisées automatiquement, sans être rognées.
+            réorientées et optimisées automatiquement, sans être rognées. La première photo est l’image principale.
           </p>
         </div>
         <label
@@ -185,14 +203,22 @@ export function AdminProductImageUploader({
                   {isPlaceholder ? "Visuel provisoire" : image.originalName}
                 </span>
                 {!isPlaceholder ? (
-                  <button
-                    type="button"
-                    onClick={() => void remove(image)}
-                    className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-red-700 hover:bg-red-50"
-                    aria-label={"Retirer " + image.originalName}
-                  >
-                    <Trash2 className="size-4" aria-hidden="true" />
-                  </button>
+                  <div className="flex shrink-0 items-center">
+                    <button type="button" disabled={index === 0} onClick={() => move(image.path, -1)} aria-label={`Avancer ${image.originalName}`} className="inline-flex size-9 items-center justify-center rounded-lg text-zinc-700 hover:bg-zinc-100 disabled:opacity-30">
+                      <ArrowUp className="size-4" aria-hidden="true" />
+                    </button>
+                    <button type="button" disabled={index === images.length - 1} onClick={() => move(image.path, 1)} aria-label={`Reculer ${image.originalName}`} className="inline-flex size-9 items-center justify-center rounded-lg text-zinc-700 hover:bg-zinc-100 disabled:opacity-30">
+                      <ArrowDown className="size-4" aria-hidden="true" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void remove(image)}
+                      className="inline-flex size-9 items-center justify-center rounded-lg text-red-700 hover:bg-red-50"
+                      aria-label={"Retirer " + image.originalName}
+                    >
+                      <Trash2 className="size-4" aria-hidden="true" />
+                    </button>
+                  </div>
                 ) : null}
               </div>
             </article>

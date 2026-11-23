@@ -22,6 +22,7 @@ export const commerceCopy = {
         OUT_OF_STOCK: "غير متوفر",
       },
       unitPrice: "سعر الوحدة التقديري",
+      averageUnitPrice: "متوسط سعر الوحدة التقريبي",
       lineTotal: "المجموع التقديري",
       subtotal: "المجموع الفرعي",
       indicativeNotice:
@@ -47,7 +48,7 @@ export const commerceCopy = {
       directOrderEyebrow: "طلب مباشر",
       directOrderTitle: "اطلب هذا المنتج من نفس الصفحة",
       directOrderDescription:
-        "اختر الكمية ثم أدخل معلومات التوصيل. سيُعاد التحقق من السعر والتوفر عند التأكيد.",
+        "أدخل معلومات التوصيل، اختر العرض والكمية ثم أكّد طلبك. سيُعاد التحقق من السعر والتوفر عند التأكيد.",
       emptyTitle: "لا يمكن إتمام طلب فارغ",
       emptyBody: "ارجع إلى الكتالوج وأضف منتجًا واحدًا على الأقل.",
       backToCart: "العودة إلى السلة",
@@ -123,6 +124,7 @@ export const commerceCopy = {
         OUT_OF_STOCK: "Indisponible",
       },
       unitPrice: "Prix unitaire indicatif",
+      averageUnitPrice: "Prix moyen indicatif par article",
       lineTotal: "Total indicatif",
       subtotal: "Sous-total",
       indicativeNotice:
@@ -150,7 +152,7 @@ export const commerceCopy = {
       directOrderEyebrow: "Commande directe",
       directOrderTitle: "Commandez depuis cette page",
       directOrderDescription:
-        "Choisissez la quantité puis renseignez vos coordonnées. Le prix et la disponibilité seront revérifiés à la confirmation.",
+        "Renseignez vos coordonnées, choisissez l’offre et la quantité, puis confirmez. Le prix et le stock seront revérifiés.",
       emptyTitle: "Impossible de commander un panier vide",
       emptyBody: "Retournez au catalogue et ajoutez au moins un produit.",
       backToCart: "Retour au panier",

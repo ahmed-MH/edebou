@@ -4,6 +4,7 @@ import { randomBytes } from "node:crypto";
 
 import { Prisma } from "@/generated/prisma/client";
 import { getCheckoutPrismaClient } from "@/lib/db/checkout-prisma";
+import { priceOrderLine } from "@/lib/checkout/offer-pricing";
 import {
   CheckoutServiceUnavailableError,
   IdempotencyConflictError,
@@ -98,19 +99,6 @@ class IdempotencyRaceLostError extends Error {
   }
 }
 
-function chooseUnitPrice(
-  basePrice: bigint,
-  quantity: number,
-  tiers: readonly { readonly minQuantity: number; readonly unitPrice: bigint }[],
-): bigint {
-  for (const tier of tiers) {
-    if (quantity >= tier.minQuantity) {
-      return tier.unitPrice;
-    }
-  }
-
-  return basePrice;
-}
 
 function existingOrderToConfirmation(
   order: ExistingOrderRow,
@@ -206,7 +194,7 @@ async function createOrderTransaction(
         price: true,
         priceTiers: {
           where: { minQuantity: { lte: 100 } },
-          select: { minQuantity: true, unitPrice: true },
+          select: { minQuantity: true, unitPrice: true, bundleTotal: true },
           orderBy: { minQuantity: "desc" },
         },
       },
@@ -231,13 +219,11 @@ async function createOrderTransaction(
       throw new OrderUnavailableError();
     }
 
-    const unitPrice = chooseUnitPrice(
+    const { unitPrice, lineTotal } = priceOrderLine(
       product.price,
       item.quantity,
       product.priceTiers,
     );
-    const lineTotal = unitPrice * BigInt(item.quantity);
-
     return { item, product, unitPrice, lineTotal };
   });
 
@@ -359,7 +345,7 @@ class PrismaCheckoutRepository
   async getSettings(): Promise<CheckoutSettingsRecord> {
     const settings = await getCheckoutPrismaClient().storeSettings.findUnique({
       where: { id: 1 },
-      select: { deliveryFee: true },
+      select: { deliveryFee: true, contactPhone: true },
     });
 
     if (!settings) {

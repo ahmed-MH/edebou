@@ -13,6 +13,7 @@ export interface OrderConfirmationRecord {
 
 export interface CheckoutSettingsRecord {
   readonly deliveryFee: bigint;
+  readonly contactPhone: string | null;
 }
 
 export interface RateLimitRecord {

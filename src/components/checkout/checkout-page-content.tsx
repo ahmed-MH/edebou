@@ -15,7 +15,7 @@ import { formatTunisianDinars } from "@/lib/format-currency";
 
 import { commerceCopy } from "../cart/commerce-copy";
 import { useCart } from "../cart/cart-provider";
-import { createIdempotencyKey, getIndicativeUnitPrice } from "../cart/cart-state";
+import { createIdempotencyKey, getIndicativeLineTotal } from "../cart/cart-state";
 import { useCartProducts } from "../cart/use-cart-products";
 import {
   checkoutFormSchema,
@@ -232,12 +232,11 @@ export function CheckoutPageContent({
 
     return (
       total +
-      getIndicativeUnitPrice(
+      getIndicativeLineTotal(
         product.priceMillimes,
         product.priceTiers,
         item.quantity,
-      ) *
-        item.quantity
+      )
     );
   }, 0);
   const total =
@@ -439,7 +438,7 @@ export function CheckoutPageContent({
                 {product ? (
                   <bdi className="price-value shrink-0 font-bold text-ink">
                     {formatTunisianDinars(
-                      getIndicativeUnitPrice(product.priceMillimes, product.priceTiers, item.quantity) * item.quantity,
+                      getIndicativeLineTotal(product.priceMillimes, product.priceTiers, item.quantity),
                       locale,
                     )}
                   </bdi>

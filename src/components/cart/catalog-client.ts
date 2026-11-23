@@ -13,6 +13,7 @@ const productDetailSchema = z
     name: localizedTextSchema,
     description: localizedTextSchema,
     priceMillimes: z.number().int().nonnegative(),
+    compareAtPriceMillimes: z.number().int().nonnegative().nullable(),
     currency: z.literal("TND"),
     availability: z.enum(["IN_STOCK", "LOW_STOCK", "OUT_OF_STOCK"]),
     category: z
@@ -43,6 +44,7 @@ const productDetailSchema = z
         .object({
           minQuantity: z.number().int().min(2),
           unitPriceMillimes: z.number().int().nonnegative(),
+          bundleTotalMillimes: z.number().int().nonnegative().nullable().optional(),
         })
         .strict(),
     ),

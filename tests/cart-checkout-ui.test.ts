@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   cartReducer,
   createIdempotencyKey,
+  getIndicativeLineTotal,
   getIndicativeUnitPrice,
   initialCartState,
   MAX_CART_ITEM_QUANTITY,
@@ -13,6 +14,7 @@ import {
 } from "../src/components/cart/cart-state";
 import { checkoutFormSchema } from "../src/components/checkout/checkout-form-schema";
 import { buildOrderItems } from "../src/components/checkout/order-client";
+import { priceOrderLine } from "../src/lib/checkout/offer-pricing";
 
 test("cart storage accepts only bounded slug and quantity records", () => {
   const stored = JSON.stringify([
@@ -88,6 +90,25 @@ test("highest applicable wholesale tier determines indicative unit price", () =>
   assert.equal(getIndicativeUnitPrice(25_000, tiers, 4), 25_000);
   assert.equal(getIndicativeUnitPrice(25_000, tiers, 5), 23_000);
   assert.equal(getIndicativeUnitPrice(25_000, tiers, 12), 20_000);
+});
+
+test("exact bundle offers keep their configured total in the cart and final order", () => {
+  const publicTiers = [
+    { minQuantity: 2, unitPriceMillimes: 66_500, bundleTotalMillimes: 133_000 },
+    { minQuantity: 3, unitPriceMillimes: 66_333, bundleTotalMillimes: 199_000 },
+  ];
+  const storedTiers = publicTiers.map((tier) => ({
+    minQuantity: tier.minQuantity,
+    unitPrice: BigInt(tier.unitPriceMillimes),
+    bundleTotal: BigInt(tier.bundleTotalMillimes),
+  }));
+
+  assert.equal(getIndicativeLineTotal(73_000, publicTiers, 1), 73_000);
+  assert.equal(getIndicativeLineTotal(73_000, publicTiers, 2), 133_000);
+  assert.equal(getIndicativeLineTotal(73_000, publicTiers, 3), 199_000);
+  assert.equal(getIndicativeLineTotal(73_000, publicTiers, 4), 292_000);
+  assert.equal(priceOrderLine(BigInt(73_000), 3, storedTiers).lineTotal, BigInt(199_000));
+  assert.equal(priceOrderLine(BigInt(73_000), 4, storedTiers).lineTotal, BigInt(292_000));
 });
 
 test("checkout form normalizes supported Tunisian phone formats", () => {

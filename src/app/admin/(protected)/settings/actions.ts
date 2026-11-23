@@ -12,7 +12,7 @@ export interface SettingsUpdateState {
   readonly status: "idle" | "success" | "error";
   readonly message: string;
   readonly errors?: Readonly<
-    Partial<Record<"storeName" | "deliveryFee", readonly string[] | undefined>>
+    Partial<Record<"storeName" | "deliveryFee" | "contactPhone", readonly string[] | undefined>>
   >;
 }
 
@@ -32,6 +32,7 @@ export async function updateSettingsAction(
   const parsed = updateStoreSettingsSchema.safeParse({
     storeName: formData.get("storeName"),
     deliveryFee: formData.get("deliveryFee"),
+    contactPhone: formData.get("contactPhone"),
   });
   if (!parsed.success) {
     return {
@@ -44,7 +45,7 @@ export async function updateSettingsAction(
   const prisma = getAdminPrismaClient();
   const previous = await prisma.storeSettings.findUnique({
     where: { id: 1 },
-    select: { storeName: true, deliveryFee: true },
+    select: { storeName: true, deliveryFee: true, contactPhone: true },
   });
   if (!previous) {
     return {
@@ -60,6 +61,7 @@ export async function updateSettingsAction(
         data: {
           storeName: parsed.data.storeName,
           deliveryFee: BigInt(parsed.data.deliveryFee),
+          contactPhone: parsed.data.contactPhone,
         },
         select: { id: true },
       }),
@@ -73,6 +75,7 @@ export async function updateSettingsAction(
             storeNameChanged: previous.storeName !== parsed.data.storeName,
             deliveryFeeChanged:
               previous.deliveryFee !== BigInt(parsed.data.deliveryFee),
+            contactPhoneChanged: previous.contactPhone !== parsed.data.contactPhone,
           },
         },
         select: { id: true },

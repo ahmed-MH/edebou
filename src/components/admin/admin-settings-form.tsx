@@ -16,7 +16,7 @@ const initialState: SettingsUpdateState = {
 
 function firstError(
   state: SettingsUpdateState,
-  field: "storeName" | "deliveryFee",
+  field: "storeName" | "deliveryFee" | "contactPhone",
 ): string | undefined {
   return state.errors?.[field]?.[0];
 }
@@ -25,10 +25,12 @@ export function AdminSettingsForm({
   canEdit,
   deliveryFee,
   storeName,
+  contactPhone,
 }: {
   readonly canEdit: boolean;
   readonly deliveryFee: string;
   readonly storeName: string;
+  readonly contactPhone: string;
 }) {
   const [state, formAction, pending] = useActionState(
     updateSettingsAction,
@@ -98,6 +100,24 @@ export function AdminSettingsForm({
               defaultValue={deliveryFee}
               inputMode="decimal"
               autoComplete="off"
+              disabled={!canEdit || pending}
+              className="min-h-12 rounded-xl"
+            />
+          }
+        />
+        <AdminFormField
+          id="settings-contact-phone"
+          label="Téléphone de contact"
+          error={firstError(state, "contactPhone")}
+          hint="Facultatif. Affiche un bouton d’appel fixe sur les fiches produit."
+          control={
+            <input
+              name="contactPhone"
+              type="tel"
+              inputMode="tel"
+              defaultValue={contactPhone}
+              placeholder="24825365"
+              autoComplete="tel"
               disabled={!canEdit || pending}
               className="min-h-12 rounded-xl"
             />

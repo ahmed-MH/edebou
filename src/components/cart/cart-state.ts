@@ -163,13 +163,25 @@ export function getIndicativeUnitPrice(
   let selectedMinimum = 1;
 
   for (const tier of priceTiers) {
-    if (tier.minQuantity <= quantity && tier.minQuantity > selectedMinimum) {
+    if (tier.bundleTotalMillimes == null && tier.minQuantity <= quantity && tier.minQuantity > selectedMinimum) {
       unitPrice = tier.unitPriceMillimes;
       selectedMinimum = tier.minQuantity;
     }
   }
 
   return unitPrice;
+}
+
+export function getIndicativeLineTotal(
+  basePriceMillimes: number,
+  priceTiers: readonly PublicProductPriceTierDto[],
+  quantity: number,
+): number {
+  const bundleOffer = priceTiers.find(
+    (tier) => tier.minQuantity === quantity && tier.bundleTotalMillimes != null,
+  );
+  return bundleOffer?.bundleTotalMillimes ??
+    getIndicativeUnitPrice(basePriceMillimes, priceTiers, quantity) * quantity;
 }
 
 export function createIdempotencyKey(): string {

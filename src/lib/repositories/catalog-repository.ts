@@ -18,6 +18,7 @@ export interface ProductImageRecord {
 export interface ProductPriceTierRecord {
   readonly minQuantity: number;
   readonly unitPrice: bigint;
+  readonly bundleTotal?: bigint | null;
 }
 
 export interface ProductSummaryRecord {
@@ -34,6 +35,7 @@ export interface ProductSummaryRecord {
 export interface ProductDetailRecord extends ProductSummaryRecord {
   readonly descriptionAr: string;
   readonly descriptionFr: string;
+  readonly compareAtPrice?: bigint | null;
   readonly priceTiers: readonly ProductPriceTierRecord[];
 }
 

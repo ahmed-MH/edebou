@@ -8,11 +8,12 @@ import { Prisma } from "@/generated/prisma/client";
 import {
   createCategorySchema,
   createProductSchema,
+  productPricingSchema,
+  updateProductContentSchema,
 } from "@/lib/admin/catalog-input";
 import { deleteUploadedProductImages } from "@/lib/admin/product-images";
 import { getAdminPrismaClient } from "@/lib/db/admin-prisma";
 import { assertAdminMutationRequest } from "@/lib/admin/request-security";
-import { parseTunisianDinarsToMillimes } from "@/lib/money";
 import { requireAdminSession } from "@/lib/admin/session";
 
 const identifierSchema = z.string().uuid();
@@ -125,6 +126,9 @@ export async function createProductAction(
     descriptionFr: formData.get("descriptionFr"),
     descriptionAr: formData.get("descriptionAr"),
     priceMillimes: formData.get("priceMillimes"),
+    compareAtPriceMillimes: formData.get("compareAtPriceMillimes"),
+    bundlePrice2: formData.get("bundlePrice2"),
+    bundlePrice3: formData.get("bundlePrice3"),
     stockQuantity: formData.get("stockQuantity"),
     imagePaths: formData.getAll("imagePaths"),
     isActive: formData.get("isActive") === "on",
@@ -155,6 +159,7 @@ export async function createProductAction(
           descriptionFr: parsed.data.descriptionFr,
           descriptionAr: parsed.data.descriptionAr,
           price: BigInt(parsed.data.priceMillimes),
+          compareAtPrice: parsed.data.compareAtPriceMillimes === undefined ? null : BigInt(parsed.data.compareAtPriceMillimes),
           stockQuantity: parsed.data.stockQuantity,
           isActive: parsed.data.isActive,
           images: {
@@ -164,6 +169,16 @@ export async function createProductAction(
               altAr: parsed.data.nameAr,
               position,
             })),
+          },
+          priceTiers: {
+            create: ([2, 3] as const).flatMap((quantity) => {
+              const total = quantity === 2 ? parsed.data.bundlePrice2 : parsed.data.bundlePrice3;
+              return total === undefined ? [] : [{
+                minQuantity: quantity,
+                unitPrice: BigInt(Math.floor(total / quantity)),
+                bundleTotal: BigInt(total),
+              }];
+            }),
           },
         },
         select: { id: true },
@@ -311,31 +326,60 @@ export async function updateIntentAction(formData: FormData): Promise<void> {
   revalidatePath("/admin/intents");
 }
 
-export async function updateProductAction(formData: FormData): Promise<void> {
+export async function updateProductAction(
+  _previousState: CatalogCreateState,
+  formData: FormData,
+): Promise<CatalogCreateState> {
   const identity = await requireAdminMutation();
   const id = identifierSchema.parse(formData.get("id"));
-  const stockQuantity = z.coerce.number().int().min(0).max(1_000_000).parse(
-    formData.get("stockQuantity"),
-  );
-  const priceMillimes = parseTunisianDinarsToMillimes(
-    z.string().max(32).parse(formData.get("price")),
-  );
+  const parsedStock = z.coerce.number().int().min(0).max(1_000_000).safeParse(formData.get("stockQuantity"));
+  if (!parsedStock.success) return {
+    message: "Vérifiez le stock saisi.",
+    errors: { stockQuantity: [parsedStock.error.issues[0]?.message ?? "Stock invalide."] },
+  };
+  const parsedPricing = productPricingSchema.safeParse({
+    priceMillimes: formData.get("price"),
+    compareAtPriceMillimes: formData.get("compareAtPriceMillimes"),
+    bundlePrice2: formData.get("bundlePrice2"),
+    bundlePrice3: formData.get("bundlePrice3"),
+  });
+  if (!parsedPricing.success) return validationState(parsedPricing.error);
+  const pricing = parsedPricing.data;
+  const priceMillimes = pricing.priceMillimes;
+  const stockQuantity = parsedStock.data;
   const isActive = formData.get("isActive") === "on";
   const prisma = getAdminPrismaClient();
 
   const previous = await prisma.product.findUnique({
     where: { id },
-    select: { stockQuantity: true, price: true, isActive: true },
+    select: { stockQuantity: true, price: true, isActive: true, slug: true },
   });
   if (!previous) throw new Error("PRODUCT_NOT_FOUND");
 
-  await prisma.$transaction([
-    prisma.product.update({
+  await prisma.$transaction(async (transaction) => {
+    await transaction.product.update({
       where: { id },
-      data: { stockQuantity, price: BigInt(priceMillimes), isActive },
+      data: { stockQuantity, price: BigInt(priceMillimes), compareAtPrice: pricing.compareAtPriceMillimes === undefined ? null : BigInt(pricing.compareAtPriceMillimes), isActive },
       select: { id: true },
-    }),
-    prisma.adminAuditLog.create({
+    });
+    await transaction.productPriceTier.deleteMany({
+      where: { productId: id, minQuantity: { in: [2, 3] } },
+    });
+    for (const quantity of [2, 3] as const) {
+      const total = quantity === 2 ? pricing.bundlePrice2 : pricing.bundlePrice3;
+      if (total !== undefined) {
+        await transaction.productPriceTier.create({
+          data: {
+            productId: id,
+            minQuantity: quantity,
+            unitPrice: BigInt(Math.floor(total / quantity)),
+            bundleTotal: BigInt(total),
+          },
+          select: { id: true },
+        });
+      }
+    }
+    await transaction.adminAuditLog.create({
       data: {
         actorUserId: identity.id,
         action: "PRODUCT_UPDATED",
@@ -349,12 +393,97 @@ export async function updateProductAction(formData: FormData): Promise<void> {
         },
       },
       select: { id: true },
-    }),
-  ]);
+    });
+  });
   revalidatePath("/admin");
   revalidatePath("/admin/products");
   revalidatePath("/fr");
   revalidatePath("/");
+  revalidatePath(`/products/${previous.slug}`);
+  revalidatePath(`/fr/products/${previous.slug}`);
+  return { message: "Prix, offres et stock enregistrés." };
+}
+
+export async function updateProductContentAction(
+  _previousState: CatalogCreateState,
+  formData: FormData,
+): Promise<CatalogCreateState> {
+  const identity = await requireAdminMutation();
+  const id = identifierSchema.parse(formData.get("id"));
+  const parsed = updateProductContentSchema.safeParse({
+    categoryId: formData.get("categoryId"),
+    nameFr: formData.get("nameFr"),
+    nameAr: formData.get("nameAr"),
+    descriptionFr: formData.get("descriptionFr"),
+    descriptionAr: formData.get("descriptionAr"),
+    imagePaths: formData.getAll("imagePaths"),
+  });
+  if (!parsed.success) return validationState(parsed.error);
+
+  const prisma = getAdminPrismaClient();
+  const previous = await prisma.product.findUnique({
+    where: { id },
+    select: { slug: true, images: { select: { path: true } } },
+  });
+  if (!previous) return { message: "Ce produit n’existe plus." };
+
+  try {
+    await prisma.$transaction(async (transaction) => {
+      await transaction.productImage.deleteMany({ where: { productId: id } });
+      await transaction.product.update({
+        where: { id },
+        data: {
+          categoryId: parsed.data.categoryId,
+          nameFr: parsed.data.nameFr,
+          nameAr: parsed.data.nameAr,
+          descriptionFr: parsed.data.descriptionFr,
+          descriptionAr: parsed.data.descriptionAr,
+          images: {
+            create: parsed.data.imagePaths.map((path, position) => ({
+              path,
+              position,
+              altFr: parsed.data.nameFr,
+              altAr: parsed.data.nameAr,
+            })),
+          },
+        },
+        select: { id: true },
+      });
+      await transaction.adminAuditLog.create({
+        data: {
+          actorUserId: identity.id,
+          action: "PRODUCT_UPDATED",
+          entityType: "PRODUCT",
+          entityId: id,
+          summary: { slug: previous.slug, contentUpdated: true, imageCount: parsed.data.imagePaths.length },
+        },
+        select: { id: true },
+      });
+    });
+  } catch (error) {
+    console.error("Admin product content update failed.", error);
+    return { message: "Le produit n’a pas pu être enregistré. Réessayez." };
+  }
+
+  try {
+    const removedPaths = previous.images
+      .map((image) => image.path)
+      .filter((path) => !parsed.data.imagePaths.includes(path));
+    const orphanedPaths = await Promise.all(removedPaths.map(async (path) => ({
+      path,
+      count: await prisma.productImage.count({ where: { path } }),
+    })));
+    await deleteUploadedProductImages(orphanedPaths.filter((image) => image.count === 0).map((image) => image.path));
+  } catch (error) {
+    console.error("Old product image cleanup failed.", error);
+  }
+
+  revalidatePath("/admin/products");
+  revalidatePath("/products");
+  revalidatePath("/fr/products");
+  revalidatePath(`/products/${previous.slug}`);
+  revalidatePath(`/fr/products/${previous.slug}`);
+  redirect("/admin/products");
 }
 
 export async function deleteProductAction(formData: FormData): Promise<void> {

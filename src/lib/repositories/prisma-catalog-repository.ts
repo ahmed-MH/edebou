@@ -55,6 +55,7 @@ const productDetailSelect = {
   ...productSummarySelect,
   descriptionAr: true,
   descriptionFr: true,
+  compareAtPrice: true,
   images: {
     select: imageSelect,
     orderBy: { position: "asc" },
@@ -64,6 +65,7 @@ const productDetailSelect = {
     select: {
       minQuantity: true,
       unitPrice: true,
+      bundleTotal: true,
     },
     orderBy: { minQuantity: "asc" },
     take: MAX_PUBLIC_PRICE_TIERS,

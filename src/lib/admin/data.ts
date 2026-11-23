@@ -331,16 +331,48 @@ export async function getAdminProducts() {
       nameFr: true,
       nameAr: true,
       price: true,
+      compareAtPrice: true,
+      priceTiers: {
+        where: { minQuantity: { in: [2, 3] } },
+        select: { minQuantity: true, unitPrice: true, bundleTotal: true },
+      },
       stockQuantity: true,
       isActive: true,
       updatedAt: true,
       category: { select: { nameFr: true } },
     },
   });
-  return products.map((product) => ({
-    ...product,
-    priceMillimes: safeInteger(product.price),
-  }));
+  return products.map((product) => {
+    const offer2 = product.priceTiers.find((tier) => tier.minQuantity === 2);
+    const offer3 = product.priceTiers.find((tier) => tier.minQuantity === 3);
+    return {
+      ...product,
+      priceMillimes: safeInteger(product.price),
+      compareAtPriceMillimes: product.compareAtPrice === null ? null : safeInteger(product.compareAtPrice),
+      bundlePrice2Millimes: offer2 ? safeInteger(offer2.bundleTotal ?? offer2.unitPrice * BigInt(2)) : null,
+      bundlePrice3Millimes: offer3 ? safeInteger(offer3.bundleTotal ?? offer3.unitPrice * BigInt(3)) : null,
+    };
+  });
+}
+
+export async function getAdminProductForEdit(id: string) {
+  await requireAdminSession();
+  return getAdminPrismaClient().product.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      categoryId: true,
+      slug: true,
+      nameFr: true,
+      nameAr: true,
+      descriptionFr: true,
+      descriptionAr: true,
+      images: {
+        select: { path: true, position: true },
+        orderBy: { position: "asc" },
+      },
+    },
+  });
 }
 
 export async function getAdminCategories() {
@@ -363,7 +395,7 @@ export async function getAdminSettings() {
   await requireAdminSession();
   const settings = await getAdminPrismaClient().storeSettings.findUnique({
     where: { id: 1 },
-    select: { storeName: true, deliveryFee: true, updatedAt: true },
+    select: { storeName: true, deliveryFee: true, contactPhone: true, updatedAt: true },
   });
   return settings
     ? { ...settings, deliveryFeeMillimes: safeInteger(settings.deliveryFee) }

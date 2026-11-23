@@ -83,10 +83,12 @@ export function toPublicProductDetailDto(
       ar: product.descriptionAr,
       fr: product.descriptionFr,
     },
+    compareAtPriceMillimes: product.compareAtPrice == null ? null : toPublicMoney(product.compareAtPrice),
     images: product.images.map(toPublicProductImageDto),
     priceTiers: product.priceTiers.map((tier) => ({
       minQuantity: tier.minQuantity,
       unitPriceMillimes: toPublicMoney(tier.unitPrice),
+      bundleTotalMillimes: tier.bundleTotal == null ? null : toPublicMoney(tier.bundleTotal),
     })),
   };
 }

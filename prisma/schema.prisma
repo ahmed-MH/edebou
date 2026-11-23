@@ -63,6 +63,7 @@ model Product {
   descriptionAr String             @map("description_ar") @db.Text
   descriptionFr String             @map("description_fr") @db.Text
   price         BigInt             @db.BigInt
+  compareAtPrice BigInt?           @map("compare_at_price") @db.BigInt
   stockQuantity Int                @default(0) @map("stock_quantity")
   isActive      Boolean            @default(true) @map("is_active")
   createdAt     DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
@@ -96,6 +97,7 @@ model ProductPriceTier {
   productId   String  @map("product_id") @db.Uuid
   minQuantity Int     @map("min_quantity")
   unitPrice   BigInt  @map("unit_price") @db.BigInt
+  bundleTotal BigInt? @map("bundle_total") @db.BigInt
   product     Product @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
   @@unique([productId, minQuantity], map: "product_price_tiers_product_id_min_quantity_key")
@@ -149,6 +151,7 @@ model StoreSettings {
   id          Int      @id @default(1)
   deliveryFee BigInt   @map("delivery_fee") @db.BigInt
   storeName   String   @map("store_name") @db.VarChar(160)
+  contactPhone String? @map("contact_phone") @db.VarChar(16)
   updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   @@map("store_settings")

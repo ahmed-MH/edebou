@@ -15,7 +15,7 @@ import { catalogService } from "@/lib/services";
 import { orderService } from "@/lib/services/order-service";
 import { parseProductSlug } from "@/lib/validators/catalog";
 
-import { ProductGallery } from "./product-gallery";
+import { ProductAdditionalImages, ProductGallery } from "./product-gallery";
 import { ProductPurchasePanel } from "./product-purchase-panel";
 
 type ProductDetailPageProps = {
@@ -40,15 +40,14 @@ export async function ProductDetailPage({
   ]);
   const catalogPath = `${locale === "fr" ? "/fr" : ""}/products`;
   let product: Awaited<ReturnType<typeof catalogService.getProductBySlug>>;
-  let deliveryFeeMillimes: number | null = null;
+  let checkoutSettings: Awaited<ReturnType<typeof orderService.getCheckoutSettings>> | null = null;
 
   try {
     const slug = parseProductSlug(rawSlug);
-    [product, deliveryFeeMillimes] = await Promise.all([
+    [product, checkoutSettings] = await Promise.all([
       catalogService.getProductBySlug(slug),
       orderService
         .getCheckoutSettings()
-        .then((settings) => settings.deliveryFeeMillimes)
         .catch(() => null),
     ]);
   } catch (error) {
@@ -93,15 +92,21 @@ export async function ProductDetailPage({
     LOW_STOCK: "low_stock",
     OUT_OF_STOCK: "out_of_stock",
   } as const;
+  const discountPercent = product.compareAtPriceMillimes && product.compareAtPriceMillimes > product.priceMillimes
+    ? Math.round((1 - product.priceMillimes / product.compareAtPriceMillimes) * 100)
+    : null;
+  const contactPhone = checkoutSettings?.contactPhone && /^\+216[234579][0-9]{7}$/u.test(checkoutSettings.contactPhone)
+    ? checkoutSettings.contactPhone
+    : null;
 
   return (
     <div id="top" className="min-h-screen bg-white text-ink">
-      <SiteHeader locale={locale} />
-      <main id="main-content" className="px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
-        <div className="mx-auto max-w-7xl">
+      <SiteHeader locale={locale} productPage />
+      <main id="main-content" className="px-4 pb-28 pt-4 sm:px-6 sm:pt-8">
+        <div className="mx-auto max-w-3xl">
           <a
             href={catalogPath}
-            className="inline-flex min-h-11 items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-muted transition-colors hover:text-brand"
+            className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-muted transition-colors hover:text-brand"
           >
             <ArrowLeft
               className="size-4 rtl:rotate-180"
@@ -110,92 +115,92 @@ export async function ProductDetailPage({
             {tProduct("backToCatalog")}
           </a>
 
-          <div className="mt-5 grid gap-10 lg:grid-cols-[minmax(0,0.98fr)_minmax(24rem,0.78fr)] lg:items-start lg:gap-12 xl:gap-14">
+          <div className="mt-3 flex flex-wrap items-center gap-3 text-sm font-semibold">
+            <span className="text-brand">{product.category.name[locale]}</span>
+            <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 ${availabilityStyles[product.availability]}`}>
+              <AvailabilityIcon className="size-4" aria-hidden="true" />
+              {tAvailability(availabilityKey[product.availability])}
+            </span>
+          </div>
+          <h1 className="mt-4 text-3xl font-extrabold leading-tight tracking-tight text-ink sm:text-4xl">
+            {product.name[locale]}
+          </h1>
+
+          <div className="mt-5">
             <ProductGallery
               images={product.images}
               locale={locale}
               fallbackLabel={tProduct("noImage")}
+              showThumbnails={false}
             />
+          </div>
 
-            <aside className="lg:sticky lg:top-28">
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs font-bold uppercase tracking-[0.14em]">
-                <span className="text-brand">
-                  {product.category.name[locale]}
-                </span>
-                <span className="size-1 rounded-full bg-border" aria-hidden="true" />
-                <span
-                  className={`inline-flex items-center gap-1.5 rounded-sm px-2 py-1 ${availabilityStyles[product.availability]}`}
-                >
-                  <AvailabilityIcon className="size-3.5" aria-hidden="true" />
-                  {tAvailability(availabilityKey[product.availability])}
-                </span>
-              </div>
+          <div className="mt-5 border-b border-brand/60 pb-5">
+            <p className="text-sm font-semibold text-muted">{tProduct("unitPriceLabel")}</p>
+            <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1">
+              <bdi className="price-value text-3xl font-extrabold text-ink">
+                {formatTunisianDinars(product.priceMillimes, locale)}
+              </bdi>
+              {discountPercent !== null ? (
+                <>
+                  <bdi className="price-value text-xl text-muted line-through">
+                    {formatTunisianDinars(product.compareAtPriceMillimes!, locale)}
+                  </bdi>
+                  <span className="rounded-lg border border-brand/40 bg-brand-soft px-2 py-1 text-base font-bold text-brand">
+                    -{discountPercent}%
+                  </span>
+                </>
+              ) : null}
+            </div>
+          </div>
 
-              <h1 className="mt-5 text-4xl font-extrabold uppercase leading-[1.02] tracking-[-0.035em] text-ink sm:text-5xl lg:text-[2.8rem] xl:text-5xl">
-                {product.name[locale]}
-              </h1>
-              <dl className="mt-5 border-b border-ink/70 pb-7">
-                <div>
-                  <dt className="sr-only">
-                    {tProduct("unitPriceLabel")}
-                  </dt>
-                  <dd>
-                    <bdi className="price-value block text-xl font-semibold text-ink">
-                      {formatTunisianDinars(product.priceMillimes, locale)}
-                    </bdi>
-                  </dd>
-                </div>
-                <div className="mt-3 flex items-center gap-2 text-xs uppercase tracking-[0.12em] text-muted">
-                  <dt>
-                    {tProduct("skuLabel")}
-                  </dt>
-                  <dd>
-                    <bdi className="font-mono font-bold text-ink">
-                      {product.sku}
-                    </bdi>
-                  </dd>
-                </div>
-              </dl>
-
-              <section className="border-b border-border py-7">
-                <h2 className="text-xs font-bold uppercase tracking-[0.16em] text-ink">
-                  {tProduct("descriptionTitle")}
-                </h2>
-                <p className="mt-4 text-sm leading-7 text-muted sm:text-base">
-                  {product.description[locale]}
-                </p>
-              </section>
-
-              <ProductPurchasePanel
+          <div className="mt-6">
+            <ProductPurchasePanel
                 slug={product.slug}
                 locale={locale}
                 availability={product.availability}
                 basePriceMillimes={product.priceMillimes}
-                deliveryFeeMillimes={deliveryFeeMillimes}
+                contactPhone={contactPhone}
+                deliveryFeeMillimes={checkoutSettings?.deliveryFeeMillimes ?? null}
                 priceTiers={product.priceTiers}
                 productName={product.name[locale]}
                 labels={{
                   addToCart: tProduct("addToCart"),
                   addedToCart: tProduct("addedToCart"),
+                  callUs: tProduct("callUs"),
                   decreaseQuantity: tProduct("decreaseQuantity"),
-                  each: tProduct("eachLabel"),
                   fromQuantityLabels: [
                     1,
                     ...product.priceTiers.map((tier) => tier.minQuantity),
-                  ].map((quantity) => tProduct("fromQuantity", { quantity })),
+                  ].map((quantity) => tProduct("offerQuantity", { quantity })),
                   increaseQuantity: tProduct("increaseQuantity"),
                   outOfStock: tProduct("outOfStock"),
+                  orderNow: tProduct("orderNow"),
                   pricingDescription: tProduct("pricingDescription"),
                   pricingTitle: tProduct("pricingTitle"),
                   quantity: tProduct("quantityLabel"),
-                  selectedUnitPrice: tProduct("selectedUnitPrice"),
                 }}
-              />
-            </aside>
+            />
           </div>
+
+          <section className="mt-10 border-t border-border pt-8">
+            <h2 className="text-2xl font-extrabold text-ink">{tProduct("descriptionTitle")}</h2>
+            <p className="mt-4 whitespace-pre-line text-base leading-8 text-ink/85">
+              {product.description[locale]}
+            </p>
+            <p className="mt-5 text-sm text-muted">
+              {tProduct("skuLabel")} : <bdi className="font-mono">{product.sku}</bdi>
+            </p>
+          </section>
+          <ProductAdditionalImages
+            images={product.images}
+            locale={locale}
+            title={tProduct("additionalPhotos")}
+          />
         </div>
       </main>
       <SiteFooter locale={locale} />
+      {product.availability !== "OUT_OF_STOCK" ? <div className="h-20" aria-hidden="true" /> : null}
     </div>
   );
 }

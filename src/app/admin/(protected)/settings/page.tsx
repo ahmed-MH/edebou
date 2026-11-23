@@ -33,6 +33,7 @@ export default async function AdminSettingsPage() {
             <AdminSettingsForm
               canEdit={identity.role === "OWNER"}
               storeName={settings.storeName}
+              contactPhone={settings.contactPhone ?? ""}
               deliveryFee={editableTnd(settings.deliveryFeeMillimes)}
             />
           ) : <p className="mt-6 text-sm font-bold text-red-700">Paramètres indisponibles.</p>}

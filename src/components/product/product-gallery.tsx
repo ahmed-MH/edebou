@@ -11,6 +11,7 @@ type ProductGalleryProps = {
   fallbackLabel: string;
   images: readonly PublicProductImageDto[];
   locale: AppLocale;
+  showThumbnails?: boolean;
 };
 
 const galleryLabels = {
@@ -32,6 +33,7 @@ export function ProductGallery({
   fallbackLabel,
   images,
   locale,
+  showThumbnails = true,
 }: ProductGalleryProps) {
   const safeImages = images.filter((image) =>
     isSafeLocalCatalogImagePath(image.path),
@@ -43,7 +45,7 @@ export function ProductGallery({
 
   if (!activeImage) {
     return (
-      <div className="flex aspect-square items-center justify-center overflow-hidden rounded-2xl border border-border bg-white px-8 text-center text-muted">
+      <div className="flex aspect-square items-center justify-center overflow-hidden rounded-xl border border-border bg-white px-8 text-center text-muted">
         <div>
           <ImageIcon className="mx-auto size-12" aria-hidden="true" />
           <p className="mt-4 font-semibold">{fallbackLabel}</p>
@@ -88,7 +90,7 @@ export function ProductGallery({
   return (
     <section aria-label={labels.gallery}>
       <div
-        className="relative flex aspect-square touch-pan-y items-center justify-center overflow-hidden rounded-2xl border border-border/80 bg-white"
+        className="relative flex aspect-square touch-pan-y items-center justify-center overflow-hidden rounded-xl border border-border/80 bg-white"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
@@ -101,7 +103,7 @@ export function ProductGallery({
           height="1200"
           fetchPriority="high"
           decoding="async"
-          className="h-full w-full object-contain p-3 sm:p-6 lg:p-8"
+          className="h-full w-full object-contain p-0 sm:p-3 lg:p-5"
         />
 
         {safeImages.length > 1 ? (
@@ -126,7 +128,7 @@ export function ProductGallery({
         ) : null}
       </div>
 
-      <ul
+      {showThumbnails ? <ul
         className={`mt-4 flex gap-3 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
           safeImages.length <= 4 ? "justify-center" : "justify-start"
         }`}
@@ -162,7 +164,42 @@ export function ProductGallery({
             </li>
           );
         })}
-      </ul>
+      </ul> : null}
+    </section>
+  );
+}
+
+export function ProductAdditionalImages({
+  images,
+  locale,
+  title,
+}: {
+  readonly images: readonly PublicProductImageDto[];
+  readonly locale: AppLocale;
+  readonly title: string;
+}) {
+  const additionalImages = images.slice(1).filter((image) =>
+    isSafeLocalCatalogImagePath(image.path),
+  );
+  if (additionalImages.length === 0) return null;
+
+  return (
+    <section className="mt-10" aria-label={title}>
+      <h2 className="mb-5 text-2xl font-extrabold text-ink">{title}</h2>
+      <div className="grid gap-5">
+        {additionalImages.map((image) => (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            key={`${image.position}-${image.path}`}
+            src={image.path}
+            alt={image.alt[locale]}
+            width="1200"
+            height="1200"
+            loading="lazy"
+            className="h-auto w-full rounded-xl border border-border object-contain"
+          />
+        ))}
+      </div>
     </section>
   );
 }

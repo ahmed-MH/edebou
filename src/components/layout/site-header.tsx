@@ -10,6 +10,7 @@ import { MobileNavigation } from "./mobile-navigation";
 
 type SiteHeaderProps = {
   locale: AppLocale;
+  productPage?: boolean;
 };
 
 type SearchPreviewProps = {
@@ -49,7 +50,7 @@ function CatalogSearch({
   );
 }
 
-export async function SiteHeader({ locale }: SiteHeaderProps) {
+export async function SiteHeader({ locale, productPage = false }: SiteHeaderProps) {
   const [tA11y, tHeader, tNavigation] = await Promise.all([
     getTranslations("A11y"),
     getTranslations("Header"),
@@ -86,8 +87,13 @@ export async function SiteHeader({ locale }: SiteHeaderProps) {
       </a>
 
       <header className="sticky top-0 z-40 border-b border-border bg-white/95">
+        {productPage ? (
+          <div className="bg-brand px-4 py-1.5 text-center text-sm font-bold text-white sm:text-base">
+            {tHeader("welcome")}
+          </div>
+        ) : null}
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid min-h-20 grid-cols-[4.25rem_minmax(0,1fr)_4.25rem] items-center gap-3 md:flex md:min-h-[4.75rem] md:gap-5 lg:gap-7">
+          <div className={`grid grid-cols-[4.25rem_minmax(0,1fr)_4.25rem] items-center gap-3 md:flex md:min-h-[4.75rem] md:gap-5 lg:gap-7 ${productPage ? "min-h-16" : "min-h-20"}`}>
             <MobileNavigation
               ariaLabel={tA11y("mobileNavigation")}
               openLabel={tHeader("openMenu")}
@@ -99,7 +105,7 @@ export async function SiteHeader({ locale }: SiteHeaderProps) {
 
             <BrandMark
               className="min-w-0 shrink-0 justify-self-center md:justify-self-auto"
-              imageClassName="h-10 min-[390px]:h-11 md:h-9"
+              imageClassName={productPage ? "h-8 min-[390px]:h-9 md:h-9" : "h-10 min-[390px]:h-11 md:h-9"}
             />
 
             <CatalogSearch
@@ -120,7 +126,7 @@ export async function SiteHeader({ locale }: SiteHeaderProps) {
             label={tHeader("searchLabel")}
             placeholder={searchPlaceholder}
             action={productsHref}
-            className="pb-4 md:hidden"
+            className={productPage ? "hidden" : "pb-4 md:hidden"}
           />
         </div>
 

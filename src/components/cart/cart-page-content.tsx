@@ -9,6 +9,7 @@ import { formatTunisianDinars } from "@/lib/format-currency";
 import { commerceCopy } from "./commerce-copy";
 import { useCart } from "./cart-provider";
 import {
+  getIndicativeLineTotal,
   getIndicativeUnitPrice,
   MAX_CART_ITEM_QUANTITY,
 } from "./cart-state";
@@ -51,12 +52,17 @@ function CartLine({
   }
 
   const name = product.name[locale];
-  const unitPrice = getIndicativeUnitPrice(
+  const bundleOffer = product.priceTiers.find(
+    (tier) => tier.minQuantity === item.quantity && tier.bundleTotalMillimes != null,
+  );
+  const unitPrice = bundleOffer
+    ? Math.floor(bundleOffer.bundleTotalMillimes! / item.quantity)
+    : getIndicativeUnitPrice(
     product.priceMillimes,
     product.priceTiers,
     item.quantity,
   );
-  const lineTotal = unitPrice * item.quantity;
+  const lineTotal = getIndicativeLineTotal(product.priceMillimes, product.priceTiers, item.quantity);
   const isOutOfStock = product.availability === "OUT_OF_STOCK";
 
   return (
@@ -129,7 +135,7 @@ function CartLine({
             </label>
             <div>
               <p className="text-xs font-semibold text-muted">
-                {copy.common.unitPrice}
+                {bundleOffer ? copy.common.averageUnitPrice : copy.common.unitPrice}
               </p>
               <bdi className="price-value mt-1 block font-bold text-ink">
                 {formatTunisianDinars(unitPrice, locale)}
@@ -218,12 +224,11 @@ export function CartPageContent({ locale }: { readonly locale: AppLocale }) {
 
     return (
       total +
-      getIndicativeUnitPrice(
+      getIndicativeLineTotal(
         product.priceMillimes,
         product.priceTiers,
         item.quantity,
-      ) *
-        item.quantity
+      )
     );
   }, 0);
 

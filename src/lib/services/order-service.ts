@@ -16,6 +16,7 @@ import {
 
 export interface CheckoutSettingsDto {
   readonly deliveryFeeMillimes: number;
+  readonly contactPhone: string | null;
 }
 
 export interface OrderConfirmationDto {
@@ -46,7 +47,7 @@ export class OrderService {
   async getCheckoutSettings(): Promise<CheckoutSettingsDto> {
     try {
       const settings = await this.repository.getSettings();
-      return { deliveryFeeMillimes: safeMillimes(settings.deliveryFee) };
+      return { deliveryFeeMillimes: safeMillimes(settings.deliveryFee), contactPhone: settings.contactPhone };
     } catch (error) {
       if (error instanceof CheckoutError) {
         throw error;

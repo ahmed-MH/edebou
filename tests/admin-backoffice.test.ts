@@ -6,6 +6,7 @@ import { calculateIntentScore } from "../src/lib/admin/intent-score";
 import {
   createCategorySchema,
   createProductSchema,
+  productPricingSchema,
 } from "../src/lib/admin/catalog-input";
 import { isManagedProductImagePath } from "../src/lib/admin/product-images";
 import { updateStoreSettingsSchema } from "../src/lib/admin/settings-input";
@@ -114,6 +115,20 @@ test("admin catalogue creation accepts bounded bilingual records", () => {
   });
   assert.equal(product.priceMillimes, 59_900);
   assert.equal(product.stockQuantity, 12);
+  assert.equal(product.bundlePrice2, undefined);
+
+  const pricing = productPricingSchema.parse({
+    priceMillimes: "73.000",
+    compareAtPriceMillimes: "119.000",
+    bundlePrice2: "133.000",
+    bundlePrice3: "199.000",
+  });
+  assert.equal(pricing.bundlePrice3, 199_000);
+  assert.equal(productPricingSchema.safeParse({
+    priceMillimes: "73.000",
+    compareAtPriceMillimes: "70.000",
+    bundlePrice2: "200.000",
+  }).success, false);
 
   assert.equal(
     createProductSchema.safeParse({
@@ -178,7 +193,18 @@ test("store settings accept a bounded name and Tunisian delivery fee", () => {
   assert.deepEqual(settings, {
     storeName: "EDebou Tunisie",
     deliveryFee: 8_500,
+    contactPhone: null,
   });
+  assert.equal(updateStoreSettingsSchema.parse({
+    storeName: "EDebou",
+    deliveryFee: "7.000",
+    contactPhone: "24 825 365",
+  }).contactPhone, "+21624825365");
+  assert.equal(updateStoreSettingsSchema.safeParse({
+    storeName: "EDebou",
+    deliveryFee: "7.000",
+    contactPhone: "123",
+  }).success, false);
   assert.equal(
     updateStoreSettingsSchema.safeParse({
       storeName: "E",

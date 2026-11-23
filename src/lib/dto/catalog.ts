@@ -23,6 +23,7 @@ export interface PublicProductImageDto {
 export interface PublicProductPriceTierDto {
   readonly minQuantity: number;
   readonly unitPriceMillimes: number;
+  readonly bundleTotalMillimes?: number | null;
 }
 
 export interface PublicProductSummaryDto {
@@ -40,6 +41,7 @@ export interface PublicProductSummaryDto {
 }
 
 export interface PublicProductDetailDto extends PublicProductSummaryDto {
+  readonly compareAtPriceMillimes: number | null;
   readonly description: {
     readonly ar: string;
     readonly fr: string;

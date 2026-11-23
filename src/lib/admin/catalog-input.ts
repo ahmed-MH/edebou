@@ -42,6 +42,45 @@ const priceSchema = z
     }
   });
 
+const optionalBundlePriceSchema = z.preprocess(
+  (value) => value === "" || value == null ? undefined : value,
+  priceSchema.optional(),
+);
+
+const optionalComparePriceSchema = z.preprocess(
+  (value) => value === "" || value == null ? undefined : value,
+  priceSchema.optional(),
+);
+
+function validateBundlePrices(
+  pricing: { priceMillimes: number; bundlePrice2?: number; bundlePrice3?: number },
+  context: z.RefinementCtx,
+) {
+  for (const quantity of [2, 3] as const) {
+    const field = quantity === 2 ? "bundlePrice2" : "bundlePrice3";
+    const value = pricing[field];
+    if (value !== undefined && (value <= 0 || value > pricing.priceMillimes * quantity)) {
+      context.addIssue({
+        code: "custom",
+        path: [field],
+        message: `Le prix pour ${quantity} articles doit être positif et ne pas dépasser le prix normal.`,
+      });
+    }
+  }
+}
+
+export const productPricingSchema = z.object({
+  priceMillimes: priceSchema,
+  compareAtPriceMillimes: optionalComparePriceSchema,
+  bundlePrice2: optionalBundlePriceSchema,
+  bundlePrice3: optionalBundlePriceSchema,
+}).superRefine((pricing, context) => {
+  validateBundlePrices(pricing, context);
+  if (pricing.compareAtPriceMillimes !== undefined && pricing.compareAtPriceMillimes <= pricing.priceMillimes) {
+    context.addIssue({ code: "custom", path: ["compareAtPriceMillimes"], message: "Le prix barré doit être supérieur au prix actuel." });
+  }
+});
+
 export const createCategorySchema = z.object({
   slug: slugSchema,
   nameFr: z
@@ -90,6 +129,9 @@ export const createProductSchema = z.object({
     .min(1, "La description arabe est obligatoire.")
     .max(5_000, "La description ne peut pas dépasser 5 000 caractères."),
   priceMillimes: priceSchema,
+  compareAtPriceMillimes: optionalComparePriceSchema,
+  bundlePrice2: optionalBundlePriceSchema,
+  bundlePrice3: optionalBundlePriceSchema,
   stockQuantity: z.coerce
     .number()
     .int("Le stock doit être un nombre entier.")
@@ -104,4 +146,18 @@ export const createProductSchema = z.object({
       "Chaque image ne peut apparaître qu’une seule fois.",
     ),
   isActive: z.boolean(),
+}).superRefine((product, context) => {
+  validateBundlePrices(product, context);
+  if (product.compareAtPriceMillimes !== undefined && product.compareAtPriceMillimes <= product.priceMillimes) {
+    context.addIssue({ code: "custom", path: ["compareAtPriceMillimes"], message: "Le prix barré doit être supérieur au prix actuel." });
+  }
+});
+
+export const updateProductContentSchema = z.object({
+  categoryId: createProductSchema.shape.categoryId,
+  nameFr: createProductSchema.shape.nameFr,
+  nameAr: createProductSchema.shape.nameAr,
+  descriptionFr: createProductSchema.shape.descriptionFr,
+  descriptionAr: createProductSchema.shape.descriptionAr,
+  imagePaths: createProductSchema.shape.imagePaths,
 });

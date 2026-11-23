@@ -25,5 +25,15 @@ export const updateStoreSettingsSchema = z
       .min(2, "Le nom de la boutique doit contenir au moins 2 caractères.")
       .max(160, "Le nom de la boutique ne peut pas dépasser 160 caractères."),
     deliveryFee: deliveryFeeSchema,
+    contactPhone: z.string().trim().default("").transform((value, context) => {
+      if (!value) return null;
+      const normalized = value.replace(/[\s().-]/gu, "");
+      const phone = normalized.startsWith("+216") ? normalized : `+216${normalized}`;
+      if (!/^\+216[234579][0-9]{7}$/u.test(phone)) {
+        context.addIssue({ code: "custom", message: "Saisissez un numéro tunisien valide à 8 chiffres." });
+        return z.NEVER;
+      }
+      return phone;
+    }),
   })
   .strict();

@@ -6,6 +6,7 @@ import Link from "next/link";
 import {
   createCategoryAction,
   createProductAction,
+  updateProductContentAction,
   type CatalogCreateState,
 } from "@/app/admin/(protected)/mutations";
 import { AdminFormField } from "@/components/admin/admin-form-field";
@@ -337,6 +338,35 @@ export function AdminCreateProductForm({
               />
             }
           />
+          <AdminFormField
+            id="product-compare-price"
+            label="Ancien prix barré en TND"
+            error={firstError(state, "compareAtPriceMillimes")}
+            hint="Facultatif. Affiché avec le pourcentage de remise si supérieur au prix actuel."
+            control={
+              <input name="compareAtPriceMillimes" inputMode="decimal" autoComplete="off" className={controlClassName} placeholder="119.000" />
+            }
+          />
+        </div>
+        <div className="grid gap-5 md:grid-cols-2">
+          <AdminFormField
+            id="product-bundle-2"
+            label="Offre : prix total pour 2 articles"
+            error={firstError(state, "bundlePrice2")}
+            hint="Facultatif. Exemple : 133.000. Laissez vide pour conserver le tarif normal."
+            control={
+              <input name="bundlePrice2" inputMode="decimal" autoComplete="off" className={controlClassName} placeholder="133.000" />
+            }
+          />
+          <AdminFormField
+            id="product-bundle-3"
+            label="Offre : prix total pour 3 articles"
+            error={firstError(state, "bundlePrice3")}
+            hint="Facultatif. Exemple : 199.000. Laissez vide pour conserver le tarif normal."
+            control={
+              <input name="bundlePrice3" inputMode="decimal" autoComplete="off" className={controlClassName} placeholder="199.000" />
+            }
+          />
         </div>
         <label className="inline-flex min-h-12 items-center gap-3 rounded-xl border border-zinc-200 bg-zinc-50 px-4 text-sm font-bold text-zinc-800">
           <input
@@ -362,6 +392,63 @@ export function AdminCreateProductForm({
           className="inline-flex min-h-12 items-center rounded-xl bg-brand px-6 text-sm font-black text-white shadow-lg shadow-brand/20 transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50"
         >
           {pending ? "Création…" : "Créer le produit"}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+export function AdminEditProductForm({
+  product,
+  categories,
+}: {
+  readonly product: {
+    id: string;
+    categoryId: string;
+    nameFr: string;
+    nameAr: string;
+    descriptionFr: string;
+    descriptionAr: string;
+    images: readonly { path: string; position: number }[];
+  };
+  readonly categories: readonly { id: string; nameFr: string; isActive: boolean }[];
+}) {
+  const [state, formAction, pending] = useActionState(updateProductContentAction, initialState);
+
+  return (
+    <form action={formAction} className="grid gap-7">
+      <input type="hidden" name="id" value={product.id} />
+      <Feedback state={state} />
+      <div className="grid gap-5 md:grid-cols-2">
+        <AdminFormField id="edit-name-fr" label="Nom en français" required requiredIndicator="*" error={firstError(state, "nameFr")}
+          control={<input name="nameFr" defaultValue={product.nameFr} maxLength={200} className={controlClassName} />} />
+        <AdminFormField id="edit-name-ar" label="Nom en arabe" required requiredIndicator="*" error={firstError(state, "nameAr")}
+          control={<input name="nameAr" defaultValue={product.nameAr} maxLength={200} dir="rtl" className={controlClassName} />} />
+      </div>
+      <AdminFormField id="edit-category" label="Catégorie" required requiredIndicator="*" error={firstError(state, "categoryId")}
+        control={
+          <select name="categoryId" defaultValue={product.categoryId} className={controlClassName}>
+            {categories.map((category) => <option key={category.id} value={category.id}>{category.nameFr}{category.isActive ? "" : " (masquée)"}</option>)}
+          </select>
+        } />
+      <div className="grid gap-5 lg:grid-cols-2">
+        <AdminFormField id="edit-description-fr" label="Description française" required requiredIndicator="*" error={firstError(state, "descriptionFr")}
+          control={<textarea name="descriptionFr" defaultValue={product.descriptionFr} maxLength={5_000} className={textareaClassName} />} />
+        <AdminFormField id="edit-description-ar" label="Description arabe" required requiredIndicator="*" error={firstError(state, "descriptionAr")}
+          control={<textarea name="descriptionAr" defaultValue={product.descriptionAr} maxLength={5_000} dir="rtl" className={textareaClassName} />} />
+      </div>
+      <AdminProductImageUploader
+        initialImages={product.images.map((image, index) => ({
+          path: image.path,
+          originalName: `Photo ${index + 1}`,
+          persisted: true,
+        }))}
+        serverError={firstError(state, "imagePaths")}
+      />
+      <div className="flex flex-wrap justify-end gap-3 border-t border-zinc-100 pt-5">
+        <Link href="/admin/products" className="inline-flex min-h-12 items-center rounded-xl border border-zinc-300 px-5 text-sm font-bold text-zinc-700">Annuler</Link>
+        <button type="submit" disabled={pending} className="inline-flex min-h-12 items-center rounded-xl bg-brand px-6 text-sm font-black text-white disabled:opacity-60">
+          {pending ? "Enregistrement…" : "Enregistrer la fiche"}
         </button>
       </div>
     </form>
