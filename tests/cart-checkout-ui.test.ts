@@ -109,6 +109,12 @@ test("exact bundle offers keep their configured total in the cart and final orde
   assert.equal(getIndicativeLineTotal(73_000, publicTiers, 4), 292_000);
   assert.equal(priceOrderLine(BigInt(73_000), 3, storedTiers).lineTotal, BigInt(199_000));
   assert.equal(priceOrderLine(BigInt(73_000), 4, storedTiers).lineTotal, BigInt(292_000));
+  for (const quantity of [1, 2, 3, 4]) {
+    assert.equal(
+      BigInt(getIndicativeUnitPrice(73_000, publicTiers, quantity)),
+      priceOrderLine(BigInt(73_000), quantity, storedTiers).unitPrice,
+    );
+  }
 });
 
 test("checkout form normalizes supported Tunisian phone formats", () => {

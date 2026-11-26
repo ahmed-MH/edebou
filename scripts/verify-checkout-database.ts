@@ -6,7 +6,10 @@ import { Pool, type DatabaseError } from "pg";
 
 import { OrderUnavailableError } from "../src/lib/checkout/errors";
 import { disconnectCheckoutPrismaClient } from "../src/lib/db/checkout-prisma";
-import { prismaCheckoutRepository } from "../src/lib/repositories/prisma-checkout-repository";
+import {
+  ORDER_RATE_LIMIT_MAX_ATTEMPTS,
+  prismaCheckoutRepository,
+} from "../src/lib/repositories/prisma-checkout-repository";
 import type { CreateOrderPersistenceInput } from "../src/lib/repositories/checkout-repository";
 import type { ValidatedOrderRequest } from "../src/lib/validators/order";
 import { getCheckoutDatabaseTestUrls } from "./checkout-database-test-guard";
@@ -418,13 +421,14 @@ async function verifyPersistentRateLimit(): Promise<void> {
   const keyHash = digest("rate-limit");
   const results = [];
 
-  for (let attempt = 0; attempt < 9; attempt += 1) {
+  const limit = ORDER_RATE_LIMIT_MAX_ATTEMPTS;
+  for (let attempt = 0; attempt <= limit; attempt += 1) {
     results.push(await prismaCheckoutRepository.consumeRateLimit(keyHash));
   }
 
-  assert.equal(results.slice(0, 8).every((result) => result.allowed), true);
-  assert.equal(results[8]?.allowed, false);
-  assert.ok((results[8]?.retryAfterSeconds ?? 0) > 0);
+  assert.equal(results.slice(0, limit).every((result) => result.allowed), true);
+  assert.equal(results[limit]?.allowed, false);
+  assert.ok((results[limit]?.retryAfterSeconds ?? 0) > 0);
 
   await migrationPool.query(
     `UPDATE public.checkout_rate_limits

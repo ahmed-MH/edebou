@@ -25,8 +25,8 @@ async function readProjectFile(path) {
 test("API routes preserve read-only media/catalog and authenticated admin writes", async () => {
   const apiDirectory = join(projectRoot, "src/app/api");
   const routeFiles = (await collectFiles(apiDirectory))
-    .filter((file) => file.endsWith("/route.ts"))
     .map((file) => relative(projectRoot, file).replaceAll("\\", "/"))
+    .filter((file) => file.endsWith("/route.ts"))
     .sort();
 
   assert.deepEqual(routeFiles, [

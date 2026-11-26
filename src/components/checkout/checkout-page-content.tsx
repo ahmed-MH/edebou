@@ -10,6 +10,7 @@ import {
 import Link from "next/link";
 import { useRef, useState, type FormEvent } from "react";
 
+import { toMetaValue, trackMetaEvent } from "@/components/analytics/meta-pixel";
 import type { AppLocale } from "@/i18n/routing";
 import { formatTunisianDinars } from "@/lib/format-currency";
 
@@ -124,7 +125,7 @@ function Confirmation({
           <div className="flex items-center justify-between gap-4 border-t border-border pt-4">
             <dt className="font-semibold text-muted">{copy.successTotal}</dt>
             <dd>
-              <bdi className="price-value text-xl font-extrabold text-brand">
+              <bdi className="price-tag price-value text-xl">
                 {formatTunisianDinars(confirmation.totalMillimes, locale)}
               </bdi>
             </dd>
@@ -160,6 +161,7 @@ export function CheckoutPageContent({
   const [confirmation, setConfirmation] = useState<OrderConfirmation | null>(null);
   const attemptRef = useRef<{ fingerprint: string; key: string } | null>(null);
   const pendingRef = useRef(false);
+  const checkoutStartedRef = useRef(false);
   const cartHref = locale === "fr" ? "/fr/cart" : "/cart";
   const productsHref = locale === "fr" ? "/fr/products" : "/products";
   const governorates = getGovernorates(locale);
@@ -172,6 +174,14 @@ export function CheckoutPageContent({
   });
 
   const updateField = (field: FormField, value: string) => {
+    if (!checkoutStartedRef.current) {
+      checkoutStartedRef.current = true;
+      trackMetaEvent("InitiateCheckout", {
+        content_ids: orderItems.map((item) => item.productSlug),
+        content_type: "product",
+        num_items: orderItems.reduce((sum, item) => sum + item.quantity, 0),
+      });
+    }
     setForm((current) => ({ ...current, [field]: value }));
     setErrors((current) => ({ ...current, [field]: undefined }));
     setSubmitError(null);
@@ -293,6 +303,17 @@ export function CheckoutPageContent({
 
     try {
       const result = await createOrder(payload);
+      trackMetaEvent(
+        "Purchase",
+        {
+          content_ids: payload.items.map((item) => item.productSlug),
+          content_type: "product",
+          num_items: payload.items.reduce((sum, item) => sum + item.quantity, 0),
+          value: toMetaValue(result.totalMillimes),
+          currency: "TND",
+        },
+        result.orderNumber,
+      );
       setConfirmation(result);
       setForm(emptyForm);
       setErrors({});
@@ -463,7 +484,7 @@ export function CheckoutPageContent({
               <dt className="text-lg font-extrabold">{copy.checkout.total}</dt>
               <dd>
                 {total === null ? "—" : (
-                  <bdi className="price-value text-xl font-black text-brand">{formatTunisianDinars(total, locale)}</bdi>
+                  <bdi className="price-tag price-value text-xl">{formatTunisianDinars(total, locale)}</bdi>
                 )}
               </dd>
             </div>

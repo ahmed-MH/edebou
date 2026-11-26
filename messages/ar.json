@@ -26,7 +26,6 @@
   },
   "Navigation": {
     "home": "الرئيسية",
-    "categories": "الفئات",
     "products": "المنتجات"
   },
   "Hero": {
@@ -47,15 +46,7 @@
   "Categories": {
     "eyebrow": "كل الأساسيات",
     "title": "اكتشف أقسامنا",
-    "description": "هيكلة كتالوج تجمع احتياجاتك اليومية ضمن تجربة واضحة ومتناسقة.",
-    "items": {
-      "electronics": "إلكترونيات",
-      "home": "المنزل",
-      "fashion": "الأزياء",
-      "beauty": "الجمال والعناية",
-      "sport": "الرياضة واللياقة",
-      "essentials": "مستلزمات يومية"
-    }
+    "description": "هيكلة كتالوج تجمع احتياجاتك اليومية ضمن تجربة واضحة ومتناسقة."
   },
   "Products": {
     "eyebrow": "مختارات من الكتالوج",
@@ -65,13 +56,7 @@
     "demoNoticeTitle": "أسعار واضحة حتى تأكيد الطلب",
     "demoNoticeBody": "يتحقق الخادم دائمًا من السعر النهائي والتوفر عند إرسال الطلب.",
     "cartUnavailable": "عرض المنتج",
-    "imageAlt": "صورة المنتج: {name}",
-    "items": {
-      "wirelessEarbuds": "سماعات لاسلكية",
-      "electricKettle": "غلاية كهربائية",
-      "dailyBackpack": "حقيبة ظهر يومية",
-      "dailyCareSet": "مجموعة عناية يومية"
-    }
+    "imageAlt": "صورة المنتج: {name}"
   },
   "Catalog": {
     "eyebrow": "كتالوج EDebou",
@@ -127,7 +112,10 @@
     "outOfStock": "هذا المنتج غير متوفر حاليًا.",
     "noImage": "لا توجد صورة متاحة لهذا المنتج",
     "notFoundTitle": "المنتج غير موجود",
-    "notFoundDescription": "هذا المنتج غير متاح أو لم يعد موجودًا في الكتالوج."
+    "notFoundDescription": "هذا المنتج غير متاح أو لم يعد موجودًا في الكتالوج.",
+    "whatsapp": "واتساب",
+    "deliveryFee": "+ التوصيل",
+    "deliveryFree": "توصيل مجاني"
   },
   "Availability": {
     "in_stock": "متوفر",
@@ -147,7 +135,10 @@
       "returns": "الإرجاع"
     },
     "rights": "جميع الحقوق محفوظة.",
-    "brandFallback": "الهوية الرسمية لـ EDebou."
+    "brandFallback": "الهوية الرسمية لـ EDebou.",
+    "cashOnDelivery": "الدفع عند الاستلام",
+    "deliveryFee": "مصاريف التوصيل:",
+    "whatsapp": "راسلنا على واتساب"
   },
   "NotFound": {
     "eyebrow": "خطأ 404",

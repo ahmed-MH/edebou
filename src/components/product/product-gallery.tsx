@@ -90,7 +90,8 @@ export function ProductGallery({
   return (
     <section aria-label={labels.gallery}>
       <div
-        className="relative flex aspect-square touch-pan-y items-center justify-center overflow-hidden rounded-xl border border-border/80 bg-white"
+        // 4:3 on phones keeps the photo large while leaving room for the order form below it.
+        className="relative flex aspect-[4/3] touch-pan-y lg:aspect-square items-center justify-center overflow-hidden rounded-xl border border-border/80 bg-white"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >

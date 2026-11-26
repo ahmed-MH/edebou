@@ -1,8 +1,9 @@
 "use client";
 
 import { Check, Minus, Plus, ShoppingBag } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useId, useState } from "react";
 
+import { toMetaValue, trackMetaEvent } from "@/components/analytics/meta-pixel";
 import { useCart } from "@/components/cart/cart-provider";
 import { getIndicativeLineTotal, MAX_CART_ITEM_QUANTITY } from "@/components/cart/cart-state";
 import type { AppLocale } from "@/i18n/routing";
@@ -23,6 +24,7 @@ type PurchasePanelLabels = {
   pricingDescription: string;
   pricingTitle: string;
   quantity: string;
+  whatsapp: string;
 };
 
 type ProductPurchasePanelProps = {
@@ -49,11 +51,22 @@ export function ProductPurchasePanel({
   slug,
 }: ProductPurchasePanelProps) {
   const { addItem, hydrated } = useCart();
+  const quantityId = useId();
   const [quantity, setQuantity] = useState(1);
   const [wasAdded, setWasAdded] = useState(false);
   const isOutOfStock = availability === "OUT_OF_STOCK";
   const selectedTotal = getIndicativeLineTotal(basePriceMillimes, priceTiers, quantity);
   const offerQuantities = [1, ...priceTiers.map((tier) => tier.minQuantity)];
+
+  useEffect(() => {
+    trackMetaEvent("ViewContent", {
+      content_ids: [slug],
+      content_name: productName,
+      content_type: "product",
+      value: toMetaValue(basePriceMillimes),
+      currency: "TND",
+    });
+  }, [slug, productName, basePriceMillimes]);
 
   function updateQuantity(nextQuantity: number) {
     if (!Number.isInteger(nextQuantity) || nextQuantity < 1 || nextQuantity > MAX_CART_ITEM_QUANTITY) return;
@@ -67,11 +80,11 @@ export function ProductPurchasePanel({
     setWasAdded(true);
   }
 
+  // One compact row of offer buttons so the delivery fields stay on the first screen.
   const selectionControls = (
-    <div className="grid gap-5 border-t border-border pt-5">
-      <fieldset className="grid gap-3">
-        <legend className="mb-2 text-lg font-extrabold text-ink">{labels.pricingTitle}</legend>
-        <p className="text-sm leading-6 text-muted">{labels.pricingDescription}</p>
+    <fieldset>
+      <legend className="mb-2 text-sm font-extrabold text-ink">{labels.pricingTitle}</legend>
+      <div className="grid grid-cols-3 gap-2">
         {offerQuantities.map((offerQuantity, index) => {
           const offerTotal = getIndicativeLineTotal(basePriceMillimes, priceTiers, offerQuantity);
           const isSelected = quantity === offerQuantity;
@@ -83,23 +96,26 @@ export function ProductPurchasePanel({
               aria-pressed={isSelected}
               onClick={() => updateQuantity(offerQuantity)}
               className={isSelected
-                ? "flex min-h-16 w-full items-center justify-between gap-4 rounded-xl border border-brand bg-brand-soft px-4 py-3 text-start text-ink disabled:opacity-60"
-                : "flex min-h-16 w-full items-center justify-between gap-4 rounded-xl border border-border bg-white px-4 py-3 text-start text-ink hover:border-brand/50 disabled:opacity-60"}
+                ? "flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-xl border-2 border-brand bg-brand-soft px-2 py-2 text-center text-ink disabled:opacity-60"
+                : "flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-xl border-2 border-border bg-white px-2 py-2 text-center text-ink hover:border-brand/50 disabled:opacity-60"}
             >
-              <span className="inline-flex items-center gap-2 text-base font-bold">
-                {isSelected ? <Check className="size-5 text-brand" aria-hidden="true" /> : null}
+              <span className="inline-flex items-center gap-1 text-sm font-bold">
+                {isSelected ? <Check className="size-4 text-brand" aria-hidden="true" /> : null}
                 {labels.fromQuantityLabels[index]}
               </span>
-              <bdi className="price-value shrink-0 text-lg font-extrabold">
+              <bdi className={`price-value text-sm font-extrabold ${isSelected ? "text-brand" : "text-ink"}`}>
                 {formatTunisianDinars(offerTotal, locale)}
               </bdi>
             </button>
           );
         })}
-      </fieldset>
+      </div>
+    </fieldset>
+  );
 
+  const quantityControl = (
       <div className="flex items-center justify-between gap-4">
-        <label htmlFor="product-order-quantity" className="text-base font-bold text-ink">
+        <label htmlFor={quantityId} className="text-base font-bold text-ink">
           {labels.quantity}
         </label>
         <div className="inline-flex items-center rounded-xl border border-border bg-white p-1">
@@ -113,7 +129,7 @@ export function ProductPurchasePanel({
             <Minus className="size-5" aria-hidden="true" />
           </button>
           <input
-            id="product-order-quantity"
+            id={quantityId}
             type="number"
             inputMode="numeric"
             min={1}
@@ -134,7 +150,6 @@ export function ProductPurchasePanel({
           </button>
         </div>
       </div>
-    </div>
   );
 
   return (
@@ -148,19 +163,23 @@ export function ProductPurchasePanel({
         orderNowLabel={labels.orderNow}
         productName={productName}
         quantity={quantity}
+        quantityControl={quantityControl}
         selectionControls={selectionControls}
         slug={slug}
         subtotalMillimes={selectedTotal}
+        whatsappLabel={labels.whatsapp}
+        secondaryAction={
+          <button
+            type="button"
+            disabled={!hydrated || isOutOfStock}
+            onClick={handleAddToCart}
+            className="inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-xl border-2 border-ink bg-white px-5 text-base font-bold text-ink transition-colors hover:bg-soft disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-500"
+          >
+            {wasAdded ? <Check className="size-5" aria-hidden="true" /> : <ShoppingBag className="size-5" aria-hidden="true" />}
+            {isOutOfStock ? labels.outOfStock : wasAdded ? labels.addedToCart : labels.addToCart}
+          </button>
+        }
       />
-      <button
-        type="button"
-        disabled={!hydrated || isOutOfStock}
-        onClick={handleAddToCart}
-        className="inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-xl border-2 border-ink bg-white px-5 text-base font-bold text-ink transition-colors hover:bg-soft disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-500"
-      >
-        {wasAdded ? <Check className="size-5" aria-hidden="true" /> : <ShoppingBag className="size-5" aria-hidden="true" />}
-        {isOutOfStock ? labels.outOfStock : wasAdded ? labels.addedToCart : labels.addToCart}
-      </button>
       <p className="sr-only" aria-live="polite">{wasAdded ? labels.addedToCart : ""}</p>
     </div>
   );

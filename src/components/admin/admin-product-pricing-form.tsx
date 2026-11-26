@@ -31,8 +31,9 @@ export function AdminProductPricingForm({ product }: {
   ] as const;
 
   return (
-    <form action={formAction} className="grid grid-cols-[repeat(5,7.5rem)_5rem_minmax(12rem,1fr)] items-end gap-3 px-5 py-4">
+    <form action={formAction} className="grid grid-cols-2 items-end gap-3 px-4 py-4 sm:grid-cols-3 sm:px-5 xl:grid-cols-[repeat(5,minmax(0,8rem))_5rem_minmax(12rem,1fr)]">
       <input type="hidden" name="id" value={product.id} />
+      <input type="hidden" name="expectedStockQuantity" value={product.stockQuantity} />
       {fields.map((field) => (
         <label key={field.name} className="grid gap-1 text-xs font-bold text-zinc-600">
           {field.label}
@@ -43,19 +44,20 @@ export function AdminProductPricingForm({ product }: {
             defaultValue={field.value}
             placeholder={field.name === "price" ? undefined : "Facultatif"}
             aria-invalid={Boolean(state.errors?.[field.name === "price" ? "priceMillimes" : field.name])}
-            className="min-h-10 rounded-lg border border-zinc-300 px-3 text-sm font-bold text-zinc-950"
+            className="min-h-11 w-full min-w-0 rounded-lg border border-zinc-300 px-3 text-base font-bold text-zinc-950 sm:text-sm"
           />
         </label>
       ))}
       <label className="grid gap-1 text-xs font-bold text-zinc-600">Stock
-        <input name="stockQuantity" type="number" min={0} max={1_000_000} required defaultValue={product.stockQuantity} aria-invalid={Boolean(state.errors?.stockQuantity)} className="min-h-10 rounded-lg border border-zinc-300 px-3 text-sm font-bold text-zinc-950" />
+        {/* Remount when the server stock changes so the field never resubmits a stale value. */}
+        <input key={product.stockQuantity} name="stockQuantity" type="number" min={0} max={1_000_000} required defaultValue={product.stockQuantity} aria-invalid={Boolean(state.errors?.stockQuantity)} className="min-h-11 w-full min-w-0 rounded-lg border border-zinc-300 px-3 text-base font-bold text-zinc-950 sm:text-sm" />
       </label>
-      <label className="inline-flex min-h-10 items-center gap-2 text-sm font-bold">
-        <input name="isActive" type="checkbox" defaultChecked={product.isActive} className="size-4 accent-[var(--brand)]" />
+      <label className="inline-flex min-h-11 items-center gap-2 text-sm font-bold">
+        <input name="isActive" type="checkbox" defaultChecked={product.isActive} className="size-5 accent-[var(--brand)]" />
         <span>Actif</span>
       </label>
-      <div className="ms-auto flex items-center gap-2">
-        <button type="submit" disabled={pending} className="min-h-10 rounded-lg bg-zinc-950 px-4 font-extrabold text-white hover:bg-brand disabled:opacity-60">
+      <div className="col-span-full flex flex-wrap items-center gap-2 xl:col-span-1 xl:ms-auto">
+        <button type="submit" disabled={pending} className="min-h-11 flex-1 rounded-lg sm:flex-none bg-zinc-950 px-4 font-extrabold text-white hover:bg-brand disabled:opacity-60">
           {pending ? "Enregistrement…" : "Enregistrer"}
         </button>
         <AdminDeleteSubmitButton

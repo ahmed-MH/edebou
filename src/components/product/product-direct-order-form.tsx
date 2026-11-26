@@ -5,14 +5,16 @@ import {
   LoaderCircle,
   Map as MapIcon,
   MapPin,
+  MessageCircle,
   Phone,
   ShoppingBag,
   Truck,
   UserRound,
   type LucideIcon,
 } from "lucide-react";
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from "react";
 
+import { toMetaValue, trackMetaEvent } from "@/components/analytics/meta-pixel";
 import { commerceCopy } from "@/components/cart/commerce-copy";
 import { createIdempotencyKey } from "@/components/cart/cart-state";
 import {
@@ -30,6 +32,7 @@ import { getGovernorates } from "@/components/checkout/tunisia-governorates";
 import { useCheckoutIntentTracking } from "@/components/checkout/use-checkout-intent";
 import type { AppLocale } from "@/i18n/routing";
 import { formatTunisianDinars } from "@/lib/format-currency";
+import { productOrderMessage, whatsappUrl } from "@/lib/whatsapp";
 
 type FormField = "fullName" | "phone" | "governorate" | "address";
 type FormState = Record<FormField, string>;
@@ -54,6 +57,7 @@ function RequiredFieldLabel({ label }: { readonly label: string }) {
 }
 
 function DirectOrderField({
+  idPrefix,
   field,
   label,
   value,
@@ -65,6 +69,7 @@ function DirectOrderField({
   maxLength,
   onChange,
 }: {
+  readonly idPrefix: string;
   readonly field: "fullName" | "phone";
   readonly label: string;
   readonly value: string;
@@ -76,13 +81,13 @@ function DirectOrderField({
   readonly maxLength: number;
   readonly onChange: (field: FormField, value: string) => void;
 }) {
-  const id = `direct-order-${field}`;
+  const id = `${idPrefix}-${field}`;
   const descriptionId = `${id}-description`;
 
   return (
-    <label className="grid gap-1.5 text-sm font-bold text-ink" htmlFor={id}>
+    <label className="grid gap-1 text-sm font-bold text-ink" htmlFor={id}>
       <RequiredFieldLabel label={label} />
-      <span className="flex min-h-14 overflow-hidden rounded-xl border border-border bg-white shadow-sm transition-colors focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/10">
+      <span className="flex min-h-12 overflow-hidden rounded-xl border border-border bg-white shadow-sm transition-colors focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/10">
         <span className="inline-flex w-14 shrink-0 items-center justify-center border-e border-border bg-soft text-ink">
           <Icon className="size-5" aria-hidden="true" />
         </span>
@@ -123,9 +128,12 @@ export function ProductDirectOrderForm({
   orderNowLabel,
   productName,
   quantity,
+  quantityControl,
+  secondaryAction,
   selectionControls,
   slug,
   subtotalMillimes,
+  whatsappLabel,
 }: {
   readonly availability: "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK";
   readonly callUsLabel: string;
@@ -135,9 +143,14 @@ export function ProductDirectOrderForm({
   readonly orderNowLabel: string;
   readonly productName: string;
   readonly quantity: number;
+  /** Shown under the form, hidden once the order is confirmed (e.g. add to cart). */
+  /** Quantity stepper, placed after the address so the first screen stays short. */
+  readonly quantityControl: ReactNode;
+  readonly secondaryAction?: ReactNode;
   readonly selectionControls: ReactNode;
   readonly slug: string;
   readonly subtotalMillimes: number;
+  readonly whatsappLabel: string;
 }) {
   const copy = commerceCopy[locale];
   const governorates = getGovernorates(locale);
@@ -146,11 +159,16 @@ export function ProductDirectOrderForm({
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [confirmation, setConfirmation] = useState<OrderConfirmation | null>(null);
+  // Unique per instance: Next keeps the previous page mounted but hidden, so fixed ids
+  // would make labels and the fixed submit button target the hidden copy.
+  const idPrefix = useId();
+  const formId = `${idPrefix}-form`;
   const formRef = useRef<HTMLFormElement>(null);
   const confirmationRef = useRef<HTMLElement>(null);
   const submitErrorRef = useRef<HTMLDivElement>(null);
   const attemptRef = useRef<{ fingerprint: string; key: string } | null>(null);
   const pendingRef = useRef(false);
+  const checkoutStartedRef = useRef(false);
   const totalMillimes =
     deliveryFeeMillimes === null
       ? null
@@ -180,6 +198,16 @@ export function ProductDirectOrderForm({
   }, [submitError]);
 
   const updateField = (field: FormField, value: string) => {
+    if (!checkoutStartedRef.current) {
+      checkoutStartedRef.current = true;
+      trackMetaEvent("InitiateCheckout", {
+        content_ids: [slug],
+        content_type: "product",
+        num_items: quantity,
+        value: toMetaValue(subtotalMillimes),
+        currency: "TND",
+      });
+    }
     setForm((current) => ({ ...current, [field]: value }));
     setErrors((current) => ({ ...current, [field]: undefined }));
     setSubmitError(null);
@@ -213,7 +241,9 @@ export function ProductDirectOrderForm({
       if (typeof firstInvalidField === "string" && firstInvalidField in emptyForm) {
         const control = formRef.current?.elements.namedItem(firstInvalidField);
         if (control instanceof HTMLElement) {
-          control.focus();
+          // Center it: a plain focus() can leave the field under the fixed order bar.
+          control.focus({ preventScroll: true });
+          control.scrollIntoView({ behavior: "smooth", block: "center" });
         }
       }
       return;
@@ -245,6 +275,18 @@ export function ProductDirectOrderForm({
 
     try {
       const result = await createOrder(payload);
+      // The order number doubles as event id so a retried submit is not counted twice.
+      trackMetaEvent(
+        "Purchase",
+        {
+          content_ids: [slug],
+          content_type: "product",
+          num_items: quantity,
+          value: toMetaValue(result.totalMillimes),
+          currency: "TND",
+        },
+        result.orderNumber,
+      );
       setConfirmation(result);
       setForm(emptyForm);
       setErrors({});
@@ -285,7 +327,7 @@ export function ProductDirectOrderForm({
           <div className="flex items-center justify-between gap-4">
             <dt className="font-semibold text-muted">{copy.checkout.successTotal}</dt>
             <dd>
-              <bdi className="price-value text-lg font-extrabold text-brand">
+              <bdi className="price-tag price-value text-lg">
                 {formatTunisianDinars(confirmation.totalMillimes, locale)}
               </bdi>
             </dd>
@@ -303,19 +345,23 @@ export function ProductDirectOrderForm({
 
   return (
     <>
-    <section id="direct-order" className="scroll-mt-24 rounded-xl border border-border bg-white p-4 shadow-sm sm:p-6">
-      <p className="text-sm font-bold text-brand">
+    <section id="direct-order" className="scroll-mt-24 rounded-xl border border-border bg-white p-3 shadow-sm sm:p-6">
+      <p className="hidden text-sm font-bold text-brand sm:block">
         {copy.checkout.directOrderEyebrow}
       </p>
-      <h2 className="mt-1 text-2xl font-black tracking-tight text-ink">
+      <h2 className="hidden text-lg font-black tracking-tight text-ink sm:mt-1 sm:block sm:text-2xl">
         {copy.checkout.directOrderTitle}
       </h2>
-      <p className="mt-2 text-base leading-7 text-muted">
+      <p className="mt-2 hidden text-base leading-7 text-muted sm:block">
         {copy.checkout.directOrderDescription}
       </p>
 
-      <form id="product-direct-order-form" ref={formRef} noValidate onSubmit={handleSubmit} className="mt-6 grid gap-5">
+      <form id={formId} ref={formRef} noValidate onSubmit={handleSubmit} className="grid gap-3 sm:mt-6 sm:gap-5">
+        {/* Choose the offer first, then the four delivery fields: one simple top-to-bottom path. */}
+        {selectionControls}
+
         <DirectOrderField
+          idPrefix={idPrefix}
           field="fullName"
           label={copy.checkout.fields.fullName}
           placeholder={copy.checkout.fields.fullNamePlaceholder}
@@ -327,6 +373,7 @@ export function ProductDirectOrderForm({
           onChange={updateField}
         />
         <DirectOrderField
+          idPrefix={idPrefix}
           field="phone"
           label={copy.checkout.fields.phone}
           placeholder={copy.checkout.fields.phonePlaceholder}
@@ -340,16 +387,16 @@ export function ProductDirectOrderForm({
         />
 
         <label
-          htmlFor="direct-order-governorate"
-          className="grid gap-1.5 text-sm font-bold text-ink"
+          htmlFor={`${idPrefix}-governorate`}
+          className="grid gap-1 text-sm font-bold text-ink"
         >
           <RequiredFieldLabel label={copy.checkout.fields.governorate} />
-          <span className="flex min-h-14 overflow-hidden rounded-xl border border-border bg-white shadow-sm transition-colors focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/10">
+          <span className="flex min-h-12 overflow-hidden rounded-xl border border-border bg-white shadow-sm transition-colors focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/10">
             <span className="inline-flex w-14 shrink-0 items-center justify-center border-e border-border bg-soft text-ink">
               <MapIcon className="size-5" aria-hidden="true" />
             </span>
             <select
-              id="direct-order-governorate"
+              id={`${idPrefix}-governorate`}
               name="governorate"
               required
               autoComplete="address-level1"
@@ -357,7 +404,7 @@ export function ProductDirectOrderForm({
               aria-invalid={Boolean(errors.governorate)}
               aria-describedby={
                 errors.governorate
-                  ? "direct-order-governorate-error"
+                  ? `${idPrefix}-governorate-error`
                   : undefined
               }
               onChange={(event) =>
@@ -375,7 +422,7 @@ export function ProductDirectOrderForm({
           </span>
           {errors.governorate ? (
             <span
-              id="direct-order-governorate-error"
+              id={`${idPrefix}-governorate-error`}
               className="text-xs font-semibold text-brand"
             >
               {errors.governorate}
@@ -384,16 +431,16 @@ export function ProductDirectOrderForm({
         </label>
 
         <label
-          htmlFor="direct-order-address"
-          className="grid gap-1.5 text-sm font-bold text-ink"
+          htmlFor={`${idPrefix}-address`}
+          className="grid gap-1 text-sm font-bold text-ink"
         >
           <RequiredFieldLabel label={copy.checkout.fields.address} />
-          <span className="flex min-h-14 overflow-hidden rounded-xl border border-border bg-white shadow-sm transition-colors focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/10">
+          <span className="flex min-h-12 overflow-hidden rounded-xl border border-border bg-white shadow-sm transition-colors focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/10">
             <span className="inline-flex w-14 shrink-0 items-center justify-center border-e border-border bg-soft text-ink">
               <MapPin className="size-5" aria-hidden="true" />
             </span>
             <input
-              id="direct-order-address"
+              id={`${idPrefix}-address`}
               name="address"
               required
               type="text"
@@ -403,7 +450,7 @@ export function ProductDirectOrderForm({
               placeholder={copy.checkout.fields.addressPlaceholder}
               aria-invalid={Boolean(errors.address)}
               aria-describedby={
-                errors.address ? "direct-order-address-error" : undefined
+                errors.address ? `${idPrefix}-address-error` : undefined
               }
               onChange={(event) =>
                 updateField("address", event.currentTarget.value)
@@ -413,7 +460,7 @@ export function ProductDirectOrderForm({
           </span>
           {errors.address ? (
             <span
-              id="direct-order-address-error"
+              id={`${idPrefix}-address-error`}
               className="text-xs font-semibold text-brand"
             >
               {errors.address}
@@ -421,7 +468,7 @@ export function ProductDirectOrderForm({
           ) : null}
         </label>
 
-        {selectionControls}
+        {quantityControl}
 
         <fieldset className="border border-emerald-200 bg-emerald-50 p-4">
           <legend className="px-1 text-sm font-extrabold text-ink">
@@ -486,7 +533,7 @@ export function ProductDirectOrderForm({
                 {totalMillimes === null ? (
                   "—"
                 ) : (
-                  <bdi className="price-value text-lg font-black text-brand">
+                  <bdi className="price-tag price-value text-xl">
                     {formatTunisianDinars(totalMillimes, locale)}
                   </bdi>
                 )}
@@ -522,36 +569,45 @@ export function ProductDirectOrderForm({
         ) : null}
       </form>
     </section>
+    {secondaryAction}
     {!isOutOfStock ? (
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-white/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_30px_rgb(17_24_39/10%)] backdrop-blur">
         <div className="mx-auto flex max-w-3xl items-center">
-          {isFormComplete ? (
-            <button
-              type="submit"
-              form="product-direct-order-form"
-              disabled={submitting || deliveryFeeMillimes === null}
-              className="order-cta-attract inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-sm bg-brand px-5 text-sm font-extrabold uppercase tracking-[0.12em] text-white transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:bg-muted"
-            >
-              {submitting ? <LoaderCircle className="size-5 animate-spin" aria-hidden="true" /> : null}
-              <span aria-live="polite">{submitting ? copy.checkout.submitting : copy.checkout.submit}</span>
-            </button>
-          ) : (
-            <a
-              href="#direct-order"
-              className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand px-4 text-center text-base font-bold text-white hover:bg-brand-dark"
-            >
+          {/* Always a real submit: an incomplete form shows its errors and focuses the first empty field. */}
+          <button
+            type="submit"
+            form={formId}
+            disabled={submitting || deliveryFeeMillimes === null}
+            className={`${isFormComplete ? "order-cta-attract " : ""}inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-brand px-5 text-base font-extrabold text-white transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:bg-muted`}
+          >
+            {submitting ? (
+              <LoaderCircle className="size-5 animate-spin" aria-hidden="true" />
+            ) : (
               <ShoppingBag className="size-5" aria-hidden="true" />
-              {orderNowLabel}
-            </a>
-          )}
+            )}
+            <span aria-live="polite">
+              {submitting ? copy.checkout.submitting : isFormComplete ? copy.checkout.submit : orderNowLabel}
+            </span>
+          </button>
           {contactPhone ? (
-            <a
-              href={`tel:${contactPhone}`}
-              aria-label={callUsLabel}
-              className="ms-3 inline-flex size-12 shrink-0 items-center justify-center rounded-xl border border-brand text-brand hover:bg-brand-soft"
-            >
-              <Phone className="size-6" aria-hidden="true" />
-            </a>
+            <>
+              <a
+                href={whatsappUrl(contactPhone, productOrderMessage(productName))}
+                target="_blank"
+                rel="noreferrer"
+                aria-label={whatsappLabel}
+                className="ms-3 inline-flex size-12 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white hover:bg-emerald-700"
+              >
+                <MessageCircle className="size-6" aria-hidden="true" />
+              </a>
+              <a
+                href={`tel:${contactPhone}`}
+                aria-label={callUsLabel}
+                className="ms-2 inline-flex size-12 shrink-0 items-center justify-center rounded-xl border border-brand text-brand hover:bg-brand-soft"
+              >
+                <Phone className="size-6" aria-hidden="true" />
+              </a>
+            </>
           ) : null}
         </div>
       </div>

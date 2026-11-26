@@ -1,4 +1,4 @@
-import { AlertTriangle, ArrowLeft, CircleAlert, CircleCheck } from "lucide-react";
+import { AlertTriangle, ArrowLeft, CircleAlert, CircleCheck, Truck } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
@@ -102,59 +102,62 @@ export async function ProductDetailPage({
   return (
     <div id="top" className="min-h-screen bg-white text-ink">
       <SiteHeader locale={locale} productPage />
-      <main id="main-content" className="px-4 pb-28 pt-4 sm:px-6 sm:pt-8">
-        <div className="mx-auto max-w-3xl">
-          <a
-            href={catalogPath}
-            className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-muted transition-colors hover:text-brand"
-          >
-            <ArrowLeft
-              className="size-4 rtl:rotate-180"
-              aria-hidden="true"
-            />
-            {tProduct("backToCatalog")}
-          </a>
-
-          <div className="mt-3 flex flex-wrap items-center gap-3 text-sm font-semibold">
-            <span className="text-brand">{product.category.name[locale]}</span>
-            <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 ${availabilityStyles[product.availability]}`}>
-              <AvailabilityIcon className="size-4" aria-hidden="true" />
-              {tAvailability(availabilityKey[product.availability])}
-            </span>
-          </div>
-          <h1 className="mt-4 text-3xl font-extrabold leading-tight tracking-tight text-ink sm:text-4xl">
-            {product.name[locale]}
-          </h1>
-
-          <div className="mt-5">
-            <ProductGallery
-              images={product.images}
-              locale={locale}
-              fallbackLabel={tProduct("noImage")}
-              showThumbnails={false}
-            />
-          </div>
-
-          <div className="mt-5 border-b border-brand/60 pb-5">
-            <p className="text-sm font-semibold text-muted">{tProduct("unitPriceLabel")}</p>
-            <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1">
-              <bdi className="price-value text-3xl font-extrabold text-ink">
-                {formatTunisianDinars(product.priceMillimes, locale)}
-              </bdi>
-              {discountPercent !== null ? (
-                <>
-                  <bdi className="price-value text-xl text-muted line-through">
-                    {formatTunisianDinars(product.compareAtPriceMillimes!, locale)}
-                  </bdi>
-                  <span className="rounded-lg border border-brand/40 bg-brand-soft px-2 py-1 text-base font-bold text-brand">
-                    -{discountPercent}%
-                  </span>
-                </>
-              ) : null}
+      <main id="main-content" className="px-4 pb-28 pt-3 sm:px-6 sm:pt-6">
+        {/* Phones: big photo, then name + price on one line, then the order form, so the photo
+            and the first fields show without scrolling. Computers: photo left, form right. */}
+        <div className="mx-auto flex max-w-3xl flex-col lg:grid lg:max-w-6xl lg:grid-cols-2 lg:items-start lg:gap-10">
+          <div className="order-2 mt-3 lg:col-start-2 lg:mt-0">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-semibold sm:text-sm">
+              <a
+                href={catalogPath}
+                className="inline-flex min-h-9 items-center gap-1 text-muted transition-colors hover:text-brand"
+              >
+                <ArrowLeft className="size-4 rtl:rotate-180" aria-hidden="true" />
+                {tProduct("backToCatalog")}
+              </a>
+              <span className="text-brand">{product.category.name[locale]}</span>
+              <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 ${availabilityStyles[product.availability]}`}>
+                <AvailabilityIcon className="size-3.5" aria-hidden="true" />
+                {tAvailability(availabilityKey[product.availability])}
+              </span>
             </div>
-          </div>
 
-          <div className="mt-6">
+            <div className="mt-1 flex items-start justify-between gap-3">
+                <h1 className="min-w-0 text-xl font-extrabold leading-tight tracking-tight text-ink sm:text-3xl">
+                  {product.name[locale]}
+                </h1>
+                <div className="flex shrink-0 flex-col items-end gap-1.5">
+                  <bdi className="price-tag price-value text-xl sm:text-3xl">
+                    {formatTunisianDinars(product.priceMillimes, locale)}
+                  </bdi>
+                  {discountPercent !== null ? (
+                    <div className="flex items-center gap-1.5">
+                      <bdi className="price-value text-sm font-semibold text-muted line-through decoration-brand/70 decoration-2">
+                        {formatTunisianDinars(product.compareAtPriceMillimes!, locale)}
+                      </bdi>
+                      <span dir="ltr" className="rounded-full bg-amber-400 px-2 py-0.5 text-xs font-black text-ink shadow-sm">
+                        -{discountPercent}%
+                      </span>
+                    </div>
+                  ) : null}
+                  {/* Delivery fee from Admin → Paramètres, so the customer knows the full cost up front. */}
+                  {checkoutSettings ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-bold text-emerald-800 ring-1 ring-emerald-200">
+                      <Truck className="size-3.5" aria-hidden="true" />
+                      {checkoutSettings.deliveryFeeMillimes === 0 ? (
+                        tProduct("deliveryFree")
+                      ) : (
+                        <>
+                          {tProduct("deliveryFee")}{" "}
+                          <bdi className="price-value">{formatTunisianDinars(checkoutSettings.deliveryFeeMillimes, locale)}</bdi>
+                        </>
+                      )}
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+
+          <div className="mt-3">
             <ProductPurchasePanel
                 slug={product.slug}
                 locale={locale}
@@ -179,10 +182,22 @@ export async function ProductDetailPage({
                   pricingDescription: tProduct("pricingDescription"),
                   pricingTitle: tProduct("pricingTitle"),
                   quantity: tProduct("quantityLabel"),
+                  whatsapp: tProduct("whatsapp"),
                 }}
             />
           </div>
+          </div>
 
+          <div className="order-1 lg:sticky lg:top-28 lg:col-start-1 lg:row-start-1">
+            <ProductGallery
+              images={product.images}
+              locale={locale}
+              fallbackLabel={tProduct("noImage")}
+              showThumbnails={false}
+            />
+          </div>
+
+          <div className="order-3 lg:col-span-2">
           <section className="mt-10 border-t border-border pt-8">
             <h2 className="text-2xl font-extrabold text-ink">{tProduct("descriptionTitle")}</h2>
             <p className="mt-4 whitespace-pre-line text-base leading-8 text-ink/85">
@@ -197,6 +212,7 @@ export async function ProductDetailPage({
             locale={locale}
             title={tProduct("additionalPhotos")}
           />
+          </div>
         </div>
       </main>
       <SiteFooter locale={locale} />

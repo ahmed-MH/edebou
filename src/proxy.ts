@@ -21,11 +21,12 @@ function createContentSecurityPolicy(nonce: string): string {
       ? "style-src 'self' 'unsafe-inline'"
       : `style-src 'self' 'nonce-${nonce}'`,
     ...(isDevelopment ? [] : ["style-src-attr 'none'"]),
-    "img-src 'self' data: blob:",
+    // Meta Pixel: its script loads under 'strict-dynamic'; events go to facebook.com.
+    "img-src 'self' data: blob: https://www.facebook.com",
     "font-src 'self'",
     isDevelopment
-      ? "connect-src 'self' ws: wss:"
-      : "connect-src 'self'",
+      ? "connect-src 'self' ws: wss: https://connect.facebook.net https://www.facebook.com"
+      : "connect-src 'self' https://connect.facebook.net https://www.facebook.com",
     "media-src 'self'",
     "manifest-src 'self'",
     "worker-src 'self' blob:",

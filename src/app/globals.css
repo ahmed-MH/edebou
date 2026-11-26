@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "lenis/dist/lenis.css";
 
 :root {
   --background: #ffffff;
@@ -35,6 +36,11 @@ html {
   scroll-behavior: smooth;
   scroll-padding-top: 9rem;
   color-scheme: light;
+}
+
+/* Lenis animates the scroll itself; native smooth scrolling would fight it. */
+html.lenis {
+  scroll-behavior: auto;
 }
 
 html,
@@ -123,6 +129,43 @@ button {
 .product-media-stage > * {
   position: relative;
   z-index: 1;
+}
+
+/* Product price: a red gradient "tag" with a soft glow and a light shine sweep. */
+.price-tag {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  overflow: hidden;
+  border-radius: 1rem;
+  padding: 0.2rem 0.75rem;
+  font-weight: 900;
+  color: #fff;
+  background-image: linear-gradient(135deg, #ff3355 0%, var(--brand) 45%, var(--brand-dark) 100%);
+  box-shadow:
+    0 12px 26px -10px rgb(230 0 35 / 60%),
+    inset 0 1px 0 rgb(255 255 255 / 30%);
+}
+
+.price-tag::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 35%, rgb(255 255 255 / 35%) 50%, transparent 65%);
+  transform: translateX(-120%);
+  animation: price-tag-shine 3.6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes price-tag-shine {
+  0%,
+  65% {
+    transform: translateX(-120%);
+  }
+
+  100% {
+    transform: translateX(120%);
+  }
 }
 
 @keyframes order-cta-attract {

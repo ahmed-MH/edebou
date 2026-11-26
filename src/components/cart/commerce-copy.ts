@@ -48,7 +48,7 @@ export const commerceCopy = {
       directOrderEyebrow: "طلب مباشر",
       directOrderTitle: "اطلب هذا المنتج من نفس الصفحة",
       directOrderDescription:
-        "أدخل معلومات التوصيل، اختر العرض والكمية ثم أكّد طلبك. سيُعاد التحقق من السعر والتوفر عند التأكيد.",
+        "اختر العرض والكمية، أدخل معلومات التوصيل، ثم أكّد طلبك. سيُعاد التحقق من السعر والتوفر عند التأكيد.",
       emptyTitle: "لا يمكن إتمام طلب فارغ",
       emptyBody: "ارجع إلى الكتالوج وأضف منتجًا واحدًا على الأقل.",
       backToCart: "العودة إلى السلة",
@@ -152,7 +152,7 @@ export const commerceCopy = {
       directOrderEyebrow: "Commande directe",
       directOrderTitle: "Commandez depuis cette page",
       directOrderDescription:
-        "Renseignez vos coordonnées, choisissez l’offre et la quantité, puis confirmez. Le prix et le stock seront revérifiés.",
+        "Choisissez l’offre et la quantité, renseignez vos coordonnées, puis confirmez. Le prix et le stock seront revérifiés.",
       emptyTitle: "Impossible de commander un panier vide",
       emptyBody: "Retournez au catalogue et ajoutez au moins un produit.",
       backToCart: "Retour au panier",

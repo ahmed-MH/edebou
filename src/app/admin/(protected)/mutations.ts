@@ -232,6 +232,8 @@ export async function updateOrderStatusAction(formData: FormData): Promise<void>
       },
     });
     if (!order) throw new Error("ORDER_NOT_FOUND");
+    // Already in that status (e.g. a double-click): nothing to change or log.
+    if (order.status === nextStatus) return;
 
     const transitions: Record<typeof order.status, readonly typeof order.status[]> = {
       PENDING: ["CONFIRMED", "CANCELLED"],
@@ -240,11 +242,28 @@ export async function updateOrderStatusAction(formData: FormData): Promise<void>
       DELIVERED: [],
       CANCELLED: [],
     };
-    if (order.status !== nextStatus && !transitions[order.status].includes(nextStatus)) {
+    if (!transitions[order.status].includes(nextStatus)) {
       throw new Error("INVALID_ORDER_TRANSITION");
     }
 
-    if (nextStatus === "CANCELLED" && !order.stockRestoredAt) {
+    const restoreStock = nextStatus === "CANCELLED" && !order.stockRestoredAt;
+    // Conditional write: a concurrent update (double-click, second admin) waits on
+    // the row lock, then matches nothing, so stock can never be restored twice.
+    const claimed = await transaction.order.updateMany({
+      where: { id, status: order.status, stockRestoredAt: order.stockRestoredAt },
+      data: {
+        status: nextStatus,
+        ...(restoreStock ? { stockRestoredAt: new Date() } : {}),
+      },
+    });
+    if (claimed.count !== 1) {
+      // A simultaneous identical click already did the work: treat it as done, not as an error.
+      const latest = await transaction.order.findUnique({ where: { id }, select: { status: true } });
+      if (latest?.status === nextStatus) return;
+      throw new Error("ORDER_CHANGED_CONCURRENTLY");
+    }
+
+    if (restoreStock) {
       for (const item of order.items) {
         if (item.productId) {
           await transaction.product.update({
@@ -255,17 +274,6 @@ export async function updateOrderStatusAction(formData: FormData): Promise<void>
         }
       }
     }
-
-    await transaction.order.update({
-      where: { id },
-      data: {
-        status: nextStatus,
-        ...(nextStatus === "CANCELLED" && !order.stockRestoredAt
-          ? { stockRestoredAt: new Date() }
-          : {}),
-      },
-      select: { id: true },
-    });
     await transaction.adminAuditLog.create({
       data: {
         actorUserId: identity.id,
@@ -332,7 +340,9 @@ export async function updateProductAction(
 ): Promise<CatalogCreateState> {
   const identity = await requireAdminMutation();
   const id = identifierSchema.parse(formData.get("id"));
-  const parsedStock = z.coerce.number().int().min(0).max(1_000_000).safeParse(formData.get("stockQuantity"));
+  const stockSchema = z.coerce.number().int().min(0).max(1_000_000);
+  const parsedStock = stockSchema.safeParse(formData.get("stockQuantity"));
+  const expectedStock = stockSchema.parse(formData.get("expectedStockQuantity"));
   if (!parsedStock.success) return {
     message: "Vérifiez le stock saisi.",
     errors: { stockQuantity: [parsedStock.error.issues[0]?.message ?? "Stock invalide."] },
@@ -352,49 +362,68 @@ export async function updateProductAction(
 
   const previous = await prisma.product.findUnique({
     where: { id },
-    select: { stockQuantity: true, price: true, isActive: true, slug: true },
+    select: { isActive: true, slug: true },
   });
   if (!previous) throw new Error("PRODUCT_NOT_FOUND");
 
-  await prisma.$transaction(async (transaction) => {
-    await transaction.product.update({
-      where: { id },
-      data: { stockQuantity, price: BigInt(priceMillimes), compareAtPrice: pricing.compareAtPriceMillimes === undefined ? null : BigInt(pricing.compareAtPriceMillimes), isActive },
-      select: { id: true },
-    });
-    await transaction.productPriceTier.deleteMany({
-      where: { productId: id, minQuantity: { in: [2, 3] } },
-    });
-    for (const quantity of [2, 3] as const) {
-      const total = quantity === 2 ? pricing.bundlePrice2 : pricing.bundlePrice3;
-      if (total !== undefined) {
-        await transaction.productPriceTier.create({
-          data: {
-            productId: id,
-            minQuantity: quantity,
-            unitPrice: BigInt(Math.floor(total / quantity)),
-            bundleTotal: BigInt(total),
-          },
-          select: { id: true },
+  const stockChanged = stockQuantity !== expectedStock;
+  try {
+    await prisma.$transaction(async (transaction) => {
+      await transaction.product.update({
+        where: { id },
+        data: { price: BigInt(priceMillimes), compareAtPrice: pricing.compareAtPriceMillimes === undefined ? null : BigInt(pricing.compareAtPriceMillimes), isActive },
+        select: { id: true },
+      });
+      if (stockChanged) {
+        // Only overwrite the stock the admin actually saw; orders may have decremented it since.
+        const stockUpdate = await transaction.product.updateMany({
+          where: { id, stockQuantity: expectedStock },
+          data: { stockQuantity },
         });
+        if (stockUpdate.count !== 1) throw new Error("STOCK_CHANGED");
       }
-    }
-    await transaction.adminAuditLog.create({
-      data: {
-        actorUserId: identity.id,
-        action: "PRODUCT_UPDATED",
-        entityType: "PRODUCT",
-        entityId: id,
-        summary: {
-          stockFrom: previous.stockQuantity,
-          stockTo: stockQuantity,
-          activeFrom: previous.isActive,
-          activeTo: isActive,
+      await transaction.productPriceTier.deleteMany({
+        // The form is the only editor of offers: replace them all so no hidden offer survives.
+        where: { productId: id },
+      });
+      for (const quantity of [2, 3] as const) {
+        const total = quantity === 2 ? pricing.bundlePrice2 : pricing.bundlePrice3;
+        if (total !== undefined) {
+          await transaction.productPriceTier.create({
+            data: {
+              productId: id,
+              minQuantity: quantity,
+              unitPrice: BigInt(Math.floor(total / quantity)),
+              bundleTotal: BigInt(total),
+            },
+            select: { id: true },
+          });
+        }
+      }
+      await transaction.adminAuditLog.create({
+        data: {
+          actorUserId: identity.id,
+          action: "PRODUCT_UPDATED",
+          entityType: "PRODUCT",
+          entityId: id,
+          summary: {
+            stockFrom: expectedStock,
+            stockTo: stockChanged ? stockQuantity : expectedStock,
+            activeFrom: previous.isActive,
+            activeTo: isActive,
+          },
         },
-      },
-      select: { id: true },
+        select: { id: true },
+      });
     });
-  });
+  } catch (error) {
+    if (!(error instanceof Error) || error.message !== "STOCK_CHANGED") throw error;
+    revalidatePath("/admin/products");
+    return {
+      message: "Le stock a changé depuis l’ouverture de la page (nouvelles commandes). Rien n’a été enregistré : vérifiez le stock affiché puis réessayez.",
+      errors: { stockQuantity: ["Stock modifié entre-temps."] },
+    };
+  }
   revalidatePath("/admin");
   revalidatePath("/admin/products");
   revalidatePath("/fr");

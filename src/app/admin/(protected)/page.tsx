@@ -213,8 +213,9 @@ export default async function AdminDashboardPage() {
           </Link>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[48rem] text-sm">
-            <thead className="bg-zinc-50 text-start text-xs uppercase tracking-wide text-zinc-500">
+          {/* Phones: each row stacks as a small card (no sideways scroll). Tablets and up: a normal table. */}
+          <table className="w-full text-sm sm:min-w-[48rem]">
+            <thead className="hidden bg-zinc-50 text-start text-xs uppercase tracking-wide text-zinc-500 sm:table-header-group">
               <tr>
                 <th className="px-6 py-3 text-start">Commande</th>
                 <th className="px-6 py-3 text-start">Client</th>
@@ -225,12 +226,12 @@ export default async function AdminDashboardPage() {
             </thead>
             <tbody className="divide-y divide-zinc-100">
               {data.recentOrders.map((order) => (
-                <tr key={order.id} className="hover:bg-zinc-50/70">
-                  <td className="px-6 py-4 font-mono font-bold text-zinc-950">{order.orderNumber}</td>
-                  <td className="px-6 py-4 font-bold text-zinc-800">{order.customerName}</td>
-                  <td className="px-6 py-4 text-zinc-500">{dateFormatter.format(order.createdAt)}</td>
-                  <td className="px-6 py-4 text-end font-extrabold">{formatTunisianDinars(order.totalMillimes, "fr")}</td>
-                  <td className="px-6 py-4 text-end">
+                <tr key={order.id} className="block py-3 hover:bg-zinc-50/70 sm:table-row sm:py-0">
+                  <td className="block px-4 py-0.5 font-mono font-bold text-zinc-950 sm:table-cell sm:px-6 sm:py-4">{order.orderNumber}</td>
+                  <td className="block px-4 py-0.5 font-bold text-zinc-800 sm:table-cell sm:px-6 sm:py-4">{order.customerName}</td>
+                  <td className="block px-4 py-0.5 text-zinc-500 sm:table-cell sm:px-6 sm:py-4">{dateFormatter.format(order.createdAt)}</td>
+                  <td className="block px-4 py-0.5 font-extrabold sm:table-cell sm:px-6 sm:py-4 sm:text-end">{formatTunisianDinars(order.totalMillimes, "fr")}</td>
+                  <td className="block px-4 py-1 sm:table-cell sm:px-6 sm:py-4 sm:text-end">
                     <AdminStatusBadge tone={orderTones[order.status]}>{orderLabels[order.status]}</AdminStatusBadge>
                   </td>
                 </tr>

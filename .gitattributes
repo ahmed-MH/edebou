@@ -1,0 +1,2 @@
+# Scripts, compose files and SQL run on Linux: keep LF even on Windows checkouts.
+* text=auto eol=lf

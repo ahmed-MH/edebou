@@ -1,28 +1,29 @@
-import {
-  Dumbbell,
-  House,
-  Shirt,
-  ShoppingBasket,
-  Smartphone,
-  Sparkles,
-  type LucideIcon,
-} from "lucide-react";
+import { Tag } from "lucide-react";
+import type { Route } from "next";
+import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 
-import { demoCategories } from "@/data/demo/categories";
-import type { CategoryIconName } from "@/types/catalog";
+import { Reveal } from "@/components/motion/reveal";
+import type { AppLocale } from "@/i18n/routing";
+import type { PublicCategoryDto } from "@/lib/dto/catalog";
+import { catalogService } from "@/lib/services";
 
-const categoryIcons: Record<CategoryIconName, LucideIcon> = {
-  Smartphone,
-  House,
-  Shirt,
-  Sparkles,
-  Dumbbell,
-  ShoppingBasket,
+type CategoryGridProps = {
+  locale: AppLocale;
 };
 
-export async function CategoryGrid() {
+export async function CategoryGrid({ locale }: CategoryGridProps) {
   const t = await getTranslations();
+  const catalogPath = `${locale === "fr" ? "/fr" : ""}/products`;
+  let categories: readonly PublicCategoryDto[] = [];
+
+  try {
+    categories = await catalogService.listCategories();
+  } catch {
+    // The product grid below already shows the catalog error; just skip this section.
+  }
+
+  if (categories.length === 0) return null;
 
   return (
     <section id="categories" aria-labelledby="categories-heading" className="bg-white px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
@@ -42,25 +43,25 @@ export async function CategoryGrid() {
           </p>
         </div>
 
+        <Reveal targets="li">
         <ul className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-6">
-          {demoCategories.map((category) => {
-            const Icon = categoryIcons[category.iconName];
-
-            return (
-              <li
-                key={category.id}
+          {categories.map((category) => (
+            <li key={category.slug}>
+              <Link
+                href={`${catalogPath}?category=${encodeURIComponent(category.slug)}` as Route}
                 className="flex min-h-40 flex-col justify-between rounded-2xl border border-border bg-white p-4 shadow-card transition-[border-color,transform] hover:-translate-y-0.5 hover:border-brand/25 sm:p-5"
               >
                 <span className="inline-flex size-12 items-center justify-center rounded-xl bg-brand-soft text-brand">
-                  <Icon className="size-6" aria-hidden="true" />
+                  <Tag className="size-6" aria-hidden="true" />
                 </span>
                 <h3 className="mt-6 text-sm font-bold leading-6 text-ink sm:text-base">
-                  {t(category.nameKey)}
+                  {category.name[locale]}
                 </h3>
-              </li>
-            );
-          })}
+              </Link>
+            </li>
+          ))}
         </ul>
+        </Reveal>
       </div>
     </section>
   );

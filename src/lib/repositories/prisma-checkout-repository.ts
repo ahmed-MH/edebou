@@ -1,6 +1,6 @@
 import "server-only";
 
-import { randomBytes } from "node:crypto";
+import { randomInt } from "node:crypto";
 
 import { Prisma } from "@/generated/prisma/client";
 import { getCheckoutPrismaClient } from "@/lib/db/checkout-prisma";
@@ -23,7 +23,8 @@ import type {
 
 const MAX_ORDER_TOTAL_MILLIMES = BigInt(100_000_000);
 const MAX_TRANSACTION_ATTEMPTS = 3;
-const RATE_LIMIT_MAX_ATTEMPTS = 8;
+// Many Tunisian mobile customers share one public IP (carrier NAT), so keep this generous.
+export const ORDER_RATE_LIMIT_MAX_ATTEMPTS = 40;
 const RATE_LIMIT_WINDOW_SECONDS = 15 * 60;
 const INTENT_RATE_LIMIT_MAX_ATTEMPTS = 60;
 
@@ -50,9 +51,14 @@ interface InsertedOrderRow {
   readonly total: bigint;
 }
 
-function createOrderNumber(): string {
-  const date = new Date().toISOString().slice(0, 10).replaceAll("-", "");
-  return `EDB-${date}-${randomBytes(10).toString("hex").toUpperCase()}`;
+/** Short enough to read out on the phone, e.g. EDB-261126-4821 (Tunis date + 4 digits). */
+export function createOrderNumber(now = new Date()): string {
+  const date = new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Tunis" })
+    .format(now)
+    .slice(2)
+    .replaceAll("-", "");
+  // shortcut: 10,000 numbers per day; a clash is retried (see createOrder). Lengthen past ~500 orders/day.
+  return `EDB-${date}-${String(randomInt(10_000)).padStart(4, "0")}`;
 }
 
 function isPrismaErrorCode(error: unknown, code: string): boolean {
@@ -288,7 +294,7 @@ async function createOrderTransaction(
         ${settings.deliveryFee},
         ${total}
       )
-      ON CONFLICT ("idempotency_key_hash") DO NOTHING
+      ON CONFLICT DO NOTHING
       RETURNING
         "id",
         "order_number" AS "orderNumber",
@@ -299,8 +305,9 @@ async function createOrderTransaction(
   );
   const order = insertedOrders[0];
   if (!order) {
-    // Throwing inside the interactive transaction rolls back every stock
-    // decrement. The committed winner is resolved outside the transaction.
+    // Either the same request already committed (idempotency key) or the short
+    // order number clashed. Throwing rolls back every stock decrement; the caller
+    // replays the committed winner, or retries with a fresh order number.
     throw new IdempotencyRaceLostError();
   }
 
@@ -339,6 +346,54 @@ async function createOrderTransaction(
   };
 }
 
+async function consumeRateLimitWindow(
+  clientKeyHash: string,
+  maxAttempts: number,
+): Promise<RateLimitRecord> {
+  const rows = await getCheckoutPrismaClient().$queryRaw<RateLimitRow[]>(
+    Prisma.sql`
+      INSERT INTO "checkout_rate_limits" (
+        "key_hash", "window_started_at", "request_count", "updated_at"
+      )
+      VALUES (${clientKeyHash}, clock_timestamp(), 1, clock_timestamp())
+      ON CONFLICT ("key_hash") DO UPDATE
+      SET
+        "request_count" = CASE
+          WHEN "checkout_rate_limits"."window_started_at" <=
+            clock_timestamp() - make_interval(secs => ${RATE_LIMIT_WINDOW_SECONDS})
+          THEN 1
+          ELSE LEAST("checkout_rate_limits"."request_count" + 1, 1000000)
+        END,
+        "window_started_at" = CASE
+          WHEN "checkout_rate_limits"."window_started_at" <=
+            clock_timestamp() - make_interval(secs => ${RATE_LIMIT_WINDOW_SECONDS})
+          THEN clock_timestamp()
+          ELSE "checkout_rate_limits"."window_started_at"
+        END,
+        "updated_at" = clock_timestamp()
+      RETURNING
+        "request_count" AS "requestCount",
+        GREATEST(
+          1,
+          CEIL(EXTRACT(EPOCH FROM (
+            "window_started_at" + make_interval(secs => ${RATE_LIMIT_WINDOW_SECONDS}) -
+            clock_timestamp()
+          )))::integer
+        ) AS "retryAfterSeconds"
+    `,
+  );
+
+  const result = rows[0];
+  if (!result) {
+    throw new CheckoutServiceUnavailableError();
+  }
+
+  return {
+    allowed: result.requestCount <= maxAttempts,
+    retryAfterSeconds: result.retryAfterSeconds,
+  };
+}
+
 class PrismaCheckoutRepository
   implements CheckoutRepository, CheckoutIntentRepository
 {
@@ -355,92 +410,12 @@ class PrismaCheckoutRepository
     return settings;
   }
 
-  async consumeRateLimit(clientKeyHash: string): Promise<RateLimitRecord> {
-    const rows = await getCheckoutPrismaClient().$queryRaw<RateLimitRow[]>(
-      Prisma.sql`
-        INSERT INTO "checkout_rate_limits" (
-          "key_hash", "window_started_at", "request_count", "updated_at"
-        )
-        VALUES (${clientKeyHash}, clock_timestamp(), 1, clock_timestamp())
-        ON CONFLICT ("key_hash") DO UPDATE
-        SET
-          "request_count" = CASE
-            WHEN "checkout_rate_limits"."window_started_at" <=
-              clock_timestamp() - make_interval(secs => ${RATE_LIMIT_WINDOW_SECONDS})
-            THEN 1
-            ELSE LEAST("checkout_rate_limits"."request_count" + 1, 1000000)
-          END,
-          "window_started_at" = CASE
-            WHEN "checkout_rate_limits"."window_started_at" <=
-              clock_timestamp() - make_interval(secs => ${RATE_LIMIT_WINDOW_SECONDS})
-            THEN clock_timestamp()
-            ELSE "checkout_rate_limits"."window_started_at"
-          END,
-          "updated_at" = clock_timestamp()
-        RETURNING
-          "request_count" AS "requestCount",
-          GREATEST(
-            1,
-            CEIL(EXTRACT(EPOCH FROM (
-              "window_started_at" + make_interval(secs => ${RATE_LIMIT_WINDOW_SECONDS}) -
-              clock_timestamp()
-            )))::integer
-          ) AS "retryAfterSeconds"
-      `,
-    );
-
-    const result = rows[0];
-    if (!result) {
-      throw new CheckoutServiceUnavailableError();
-    }
-
-    return {
-      allowed: result.requestCount <= RATE_LIMIT_MAX_ATTEMPTS,
-      retryAfterSeconds: result.retryAfterSeconds,
-    };
+  consumeRateLimit(clientKeyHash: string): Promise<RateLimitRecord> {
+    return consumeRateLimitWindow(clientKeyHash, ORDER_RATE_LIMIT_MAX_ATTEMPTS);
   }
 
-  async consumeIntentRateLimit(
-    clientKeyHash: string,
-  ): Promise<RateLimitRecord> {
-    const rows = await getCheckoutPrismaClient().$queryRaw<RateLimitRow[]>(
-      Prisma.sql`
-        INSERT INTO "checkout_rate_limits" (
-          "key_hash", "window_started_at", "request_count", "updated_at"
-        )
-        VALUES (${clientKeyHash}, clock_timestamp(), 1, clock_timestamp())
-        ON CONFLICT ("key_hash") DO UPDATE
-        SET
-          "request_count" = CASE
-            WHEN "checkout_rate_limits"."window_started_at" <=
-              clock_timestamp() - make_interval(secs => ${RATE_LIMIT_WINDOW_SECONDS})
-            THEN 1
-            ELSE LEAST("checkout_rate_limits"."request_count" + 1, 1000000)
-          END,
-          "window_started_at" = CASE
-            WHEN "checkout_rate_limits"."window_started_at" <=
-              clock_timestamp() - make_interval(secs => ${RATE_LIMIT_WINDOW_SECONDS})
-            THEN clock_timestamp()
-            ELSE "checkout_rate_limits"."window_started_at"
-          END,
-          "updated_at" = clock_timestamp()
-        RETURNING
-          "request_count" AS "requestCount",
-          GREATEST(
-            1,
-            CEIL(EXTRACT(EPOCH FROM (
-              "window_started_at" + make_interval(secs => ${RATE_LIMIT_WINDOW_SECONDS}) -
-              clock_timestamp()
-            )))::integer
-          ) AS "retryAfterSeconds"
-      `,
-    );
-    const result = rows[0];
-    if (!result) throw new CheckoutServiceUnavailableError();
-    return {
-      allowed: result.requestCount <= INTENT_RATE_LIMIT_MAX_ATTEMPTS,
-      retryAfterSeconds: result.retryAfterSeconds,
-    };
+  consumeIntentRateLimit(clientKeyHash: string): Promise<RateLimitRecord> {
+    return consumeRateLimitWindow(clientKeyHash, INTENT_RATE_LIMIT_MAX_ATTEMPTS);
   }
 
   async upsertCheckoutIntent(
@@ -500,6 +475,8 @@ class PrismaCheckoutRepository
           if (replay) {
             return replay;
           }
+          // No committed twin: it was an order-number clash, so try again with a new number.
+          if (attempt < MAX_TRANSACTION_ATTEMPTS) continue;
 
           throw new CheckoutServiceUnavailableError();
         }

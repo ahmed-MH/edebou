@@ -145,6 +145,8 @@ export async function saveProductImages(
 export async function readProductImage(
   filename: string,
 ): Promise<Buffer | null> {
+  // Public URLs can carry any name; an unknown one is a 404, not a server error.
+  if (!filenamePattern.test(filename)) return null;
   try {
     return await readFile(imageFilePath(filename));
   } catch (error) {
