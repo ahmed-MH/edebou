@@ -1,10 +1,12 @@
-import { MapPin, Package, Phone, Truck } from "lucide-react";
+import { MapPin, MessageCircle, Package, Phone, Truck } from "lucide-react";
 
 import { updateOrderStatusAction } from "@/app/admin/(protected)/mutations";
 import { AdminAutoRefresh } from "@/components/admin/admin-auto-refresh";
 import { AdminPageHeader, AdminStatusBadge } from "@/components/admin";
+import { getGovernorates } from "@/components/checkout/tunisia-governorates";
 import { getAdminOrders } from "@/lib/admin/data";
 import { formatTunisianDinars } from "@/lib/format-currency";
+import { orderConfirmationMessage, whatsappUrl } from "@/lib/whatsapp";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +33,10 @@ const transitions = {
   DELIVERED: [],
   CANCELLED: [],
 } as const;
+
+const governorateLabels = new Map<string, string>(
+  getGovernorates("fr").map(({ code, label }) => [code, label]),
+);
 
 const dateFormatter = new Intl.DateTimeFormat("fr-TN", {
   dateStyle: "medium",
@@ -59,7 +65,7 @@ export default async function AdminOrdersPage() {
                 <AdminStatusBadge tone={tones[order.status]}>{labels[order.status]}</AdminStatusBadge>
                 <span className="text-xs font-semibold text-zinc-500">{dateFormatter.format(order.createdAt)}</span>
               </div>
-              <div className="flex items-center justify-between gap-5 lg:justify-end">
+              <div className="flex flex-wrap items-center justify-between gap-5 lg:justify-end">
                 <div className="text-end">
                   <span className="block text-xs font-semibold text-zinc-500">Total</span>
                   <strong className="text-lg font-black text-brand">{formatTunisianDinars(order.totalMillimes, "fr")}</strong>
@@ -87,9 +93,13 @@ export default async function AdminOrdersPage() {
                   <a href={`tel:${order.phone}`} dir="ltr" className="flex items-center gap-2 font-bold text-zinc-900 hover:text-brand">
                     <Phone className="size-4 text-brand" aria-hidden="true" /> {order.phone}
                   </a>
+                  {/* Same WhatsApp shortcut as the intents page, to confirm cash-on-delivery orders quickly. */}
+                  <a href={whatsappUrl(order.phone, orderConfirmationMessage({ customerName: order.customerName, orderNumber: order.orderNumber, total: formatTunisianDinars(order.totalMillimes, "ar") }))} target="_blank" rel="noreferrer" className="inline-flex min-h-10 w-fit items-center gap-2 rounded-lg bg-emerald-600 px-4 text-sm font-extrabold text-white hover:bg-emerald-700">
+                    <MessageCircle className="size-4" aria-hidden="true" /> WhatsApp
+                  </a>
                   <p className="flex items-start gap-2">
                     <MapPin className="mt-0.5 size-4 shrink-0 text-brand" aria-hidden="true" />
-                    <span>{order.address} · {order.governorate}</span>
+                    <span>{order.address} · {governorateLabels.get(order.governorate) ?? order.governorate}</span>
                   </p>
                 </div>
               </section>

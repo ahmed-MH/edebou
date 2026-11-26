@@ -260,3 +260,10 @@ test("rate-limit responses are private, generic and include Retry-After", async 
   assert.equal(body.error.code, "RATE_LIMITED");
   assert.equal(JSON.stringify(body).includes("phone"), false);
 });
+
+test("order numbers are short, dictatable and use the Tunis date", async () => {
+  const { createOrderNumber } = await import("../src/lib/repositories/prisma-checkout-repository");
+  // 23:30 UTC on 25 Nov is already 26 Nov in Tunis.
+  const number = createOrderNumber(new Date("2026-11-25T23:30:00Z"));
+  assert.match(number, /^EDB-261126-\d{4}$/u);
+});

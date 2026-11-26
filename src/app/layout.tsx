@@ -7,6 +7,9 @@ import { getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
 
 import { CartProvider } from "@/components/cart/cart-provider";
+import { MetaPixel } from "@/components/analytics/meta-pixel";
+import { SmoothScroll } from "@/components/motion/smooth-scroll";
+import { siteConfig } from "@/config/site";
 import { routing, type AppLocale } from "@/i18n/routing";
 
 import "./globals.css";
@@ -73,6 +76,8 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           timeZone="Africa/Tunis"
         >
           <CartProvider>{children}</CartProvider>
+          <SmoothScroll />
+          {siteConfig.metaPixelId ? <MetaPixel pixelId={siteConfig.metaPixelId} /> : null}
         </NextIntlClientProvider>
       </body>
     </html>

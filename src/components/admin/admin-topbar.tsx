@@ -22,7 +22,7 @@ export function AdminTopbar({
   return (
     <header
       className={mergeClassNames(
-        "border-b border-zinc-200 bg-white/95 px-4 py-4 backdrop-blur-sm sm:px-6 lg:sticky lg:top-0 lg:z-20 lg:px-8",
+        "border-b border-zinc-200 bg-white/95 px-4 py-3 backdrop-blur-sm sm:py-4 sm:px-6 lg:sticky lg:top-0 lg:z-20 lg:px-8",
         className,
       )}
     >
@@ -36,7 +36,7 @@ export function AdminTopbar({
             {title}
           </h1>
           {description !== undefined && description !== null ? (
-            <div className="mt-1 text-sm leading-5 text-zinc-600">
+            <div className="mt-1 hidden text-sm leading-5 text-zinc-600 sm:block">
               {description}
             </div>
           ) : null}

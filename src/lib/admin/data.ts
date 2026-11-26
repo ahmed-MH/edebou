@@ -85,11 +85,12 @@ export async function getAdminDashboardData() {
   await requireAdminSession();
   const prisma = getAdminPrismaClient();
   const now = new Date();
-  const startOfToday = new Date(now);
-  startOfToday.setHours(0, 0, 0, 0);
+  // The server runs in UTC; the shop's "day" is the Tunis calendar day.
+  const tunisDate = new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Tunis" }).format(now);
+  // shortcut: Tunisia is fixed UTC+1 with no DST since 2009; use a tz library if that changes.
+  const startOfToday = new Date(`${tunisDate}T00:00:00+01:00`);
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-  const sevenDaysAgo = new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000);
-  sevenDaysAgo.setHours(0, 0, 0, 0);
+  const sevenDaysAgo = new Date(startOfToday.getTime() - 6 * 24 * 60 * 60 * 1000);
 
   const [
     today,
@@ -162,13 +163,13 @@ export async function getAdminDashboardData() {
       Array<{ day: Date; orderCount: bigint; revenue: bigint }>
     >(Prisma.sql`
       SELECT
-        date_trunc('day', "created_at") AS "day",
+        (date_trunc('day', "created_at" AT TIME ZONE 'Africa/Tunis') AT TIME ZONE 'Africa/Tunis') AS "day",
         COUNT(*)::bigint AS "orderCount",
         COALESCE(SUM("total"), 0)::bigint AS "revenue"
       FROM "orders"
       WHERE "created_at" >= ${sevenDaysAgo}
         AND "status" <> 'CANCELLED'::"order_status"
-      GROUP BY date_trunc('day', "created_at")
+      GROUP BY 1
       ORDER BY "day" ASC
     `),
   ]);
@@ -208,33 +209,49 @@ export async function getAdminDashboardData() {
 
 export async function getAdminOrders() {
   await requireAdminSession();
-  const orders = await getAdminPrismaClient().order.findMany({
-    orderBy: { createdAt: "desc" },
-    take: 150,
-    select: {
-      id: true,
-      orderNumber: true,
-      customerName: true,
-      phone: true,
-      governorate: true,
-      address: true,
-      subtotal: true,
-      deliveryFee: true,
-      total: true,
-      status: true,
-      createdAt: true,
-      items: {
-        select: {
-          id: true,
-          productNameSnapshot: true,
-          skuSnapshot: true,
-          quantity: true,
-          unitPrice: true,
-          lineTotal: true,
-        },
+  const select = {
+    id: true,
+    orderNumber: true,
+    customerName: true,
+    phone: true,
+    governorate: true,
+    address: true,
+    subtotal: true,
+    deliveryFee: true,
+    total: true,
+    status: true,
+    createdAt: true,
+    items: {
+      select: {
+        id: true,
+        productNameSnapshot: true,
+        skuSnapshot: true,
+        quantity: true,
+        unitPrice: true,
+        lineTotal: true,
       },
     },
-  });
+  } satisfies Prisma.OrderSelect;
+  const prisma = getAdminPrismaClient();
+  // Orders still to handle must never fall off the list; finished ones only show the latest 150.
+  const [openOrders, closedOrders] = await Promise.all([
+    prisma.order.findMany({
+      where: { status: { in: ["PENDING", "CONFIRMED", "SHIPPING"] } },
+      orderBy: { createdAt: "desc" },
+      // shortcut: caps open orders at 1000 to bound the page; add pagination if a shop ever has more.
+      take: 1_000,
+      select,
+    }),
+    prisma.order.findMany({
+      where: { status: { in: ["DELIVERED", "CANCELLED"] } },
+      orderBy: { createdAt: "desc" },
+      take: 150,
+      select,
+    }),
+  ]);
+  const orders = [...openOrders, ...closedOrders].sort(
+    (left, right) => right.createdAt.getTime() - left.createdAt.getTime(),
+  );
 
   return orders.map((order) => ({
     ...order,

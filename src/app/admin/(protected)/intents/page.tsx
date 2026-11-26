@@ -3,9 +3,15 @@ import { Clock3, MapPin, MessageCircle, Phone, ShoppingBag, UserRound } from "lu
 import { updateIntentAction } from "@/app/admin/(protected)/mutations";
 import { AdminAutoRefresh } from "@/components/admin/admin-auto-refresh";
 import { AdminPageHeader, AdminStatusBadge } from "@/components/admin";
+import { getGovernorates } from "@/components/checkout/tunisia-governorates";
 import { getAdminIntents, type IntentStrength } from "@/lib/admin/data";
+import { unfinishedOrderMessage, whatsappUrl } from "@/lib/whatsapp";
 
 export const dynamic = "force-dynamic";
+
+const governorateLabels = new Map<string, string>(
+  getGovernorates("fr").map(({ code, label }) => [code, label]),
+);
 
 const dateFormatter = new Intl.DateTimeFormat("fr-TN", {
   dateStyle: "medium",
@@ -102,7 +108,6 @@ export default async function AdminIntentsPage() {
         {intents.map((intent) => {
           const items = readItems(intent.items);
           const isEditable = intent.status === "ACTIVE" || intent.status === "CONTACTED" || intent.status === "DISMISSED";
-          const whatsappNumber = intent.phone.replace(/^\+/, "");
 
           return (
             <article key={intent.id} className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
@@ -125,7 +130,7 @@ export default async function AdminIntentsPage() {
                 <div className="grid gap-3 text-sm">
                   <a href={`tel:${intent.phone}`} dir="ltr" className="flex items-center gap-2 font-extrabold text-zinc-950 hover:text-brand"><Phone className="size-4 text-brand" aria-hidden="true" /> {intent.phone}</a>
                   <p className="flex items-start gap-2 text-zinc-600"><UserRound className="mt-0.5 size-4 shrink-0 text-brand" aria-hidden="true" /> {intent.customerName || "—"}</p>
-                  <p className="flex items-start gap-2 text-zinc-600"><MapPin className="mt-0.5 size-4 shrink-0 text-brand" aria-hidden="true" /> {intent.address || "Adresse non renseignée"}{intent.governorate ? ` · ${intent.governorate}` : ""}</p>
+                  <p className="flex items-start gap-2 text-zinc-600"><MapPin className="mt-0.5 size-4 shrink-0 text-brand" aria-hidden="true" /> {intent.address || "Adresse non renseignée"}{intent.governorate ? ` · ${governorateLabels.get(intent.governorate) ?? intent.governorate}` : ""}</p>
                   <p className="flex items-center gap-2 text-xs text-zinc-500"><Clock3 className="size-4" aria-hidden="true" /> Dernière activité : {dateFormatter.format(intent.lastSeenAt)}</p>
                 </div>
                 <div className="rounded-xl bg-zinc-50 p-4">
@@ -146,7 +151,7 @@ export default async function AdminIntentsPage() {
 
               <div className="border-t border-zinc-100 bg-zinc-50/70 p-5">
                 <div className="mb-4 flex flex-wrap gap-2">
-                  <a href={`https://wa.me/${whatsappNumber}`} target="_blank" rel="noreferrer" className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-emerald-600 px-4 text-sm font-extrabold text-white hover:bg-emerald-700"><MessageCircle className="size-4" aria-hidden="true" /> WhatsApp</a>
+                  <a href={whatsappUrl(intent.phone, unfinishedOrderMessage(intent.customerName))} target="_blank" rel="noreferrer" className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-emerald-600 px-4 text-sm font-extrabold text-white hover:bg-emerald-700"><MessageCircle className="size-4" aria-hidden="true" /> WhatsApp</a>
                   <a href={`tel:${intent.phone}`} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-zinc-300 bg-white px-4 text-sm font-extrabold text-zinc-800 hover:border-brand hover:text-brand"><Phone className="size-4" aria-hidden="true" /> Appeler</a>
                 </div>
                 {isEditable ? (

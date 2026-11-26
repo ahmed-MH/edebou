@@ -26,7 +26,6 @@
   },
   "Navigation": {
     "home": "Accueil",
-    "categories": "Catégories",
     "products": "Produits"
   },
   "Hero": {
@@ -47,15 +46,7 @@
   "Categories": {
     "eyebrow": "Tous les essentiels",
     "title": "Explorez nos univers",
-    "description": "Une structure de catalogue préparée pour réunir les produits du quotidien dans une expérience cohérente.",
-    "items": {
-      "electronics": "Électronique",
-      "home": "Maison",
-      "fashion": "Mode",
-      "beauty": "Beauté et soin",
-      "sport": "Sport et bien-être",
-      "essentials": "Essentiels"
-    }
+    "description": "Une structure de catalogue préparée pour réunir les produits du quotidien dans une expérience cohérente."
   },
   "Products": {
     "eyebrow": "Sélection du catalogue",
@@ -65,13 +56,7 @@
     "demoNoticeTitle": "Des prix clairs, jusqu’à la confirmation",
     "demoNoticeBody": "Les prix définitifs et la disponibilité sont toujours revérifiés par le serveur au moment de la commande.",
     "cartUnavailable": "Voir le produit",
-    "imageAlt": "Photo du produit : {name}",
-    "items": {
-      "wirelessEarbuds": "Écouteurs sans fil",
-      "electricKettle": "Bouilloire électrique",
-      "dailyBackpack": "Sac à dos urbain",
-      "dailyCareSet": "Coffret soin quotidien"
-    }
+    "imageAlt": "Photo du produit : {name}"
   },
   "Catalog": {
     "eyebrow": "Catalogue EDebou",
@@ -127,7 +112,10 @@
     "outOfStock": "Ce produit est actuellement indisponible.",
     "noImage": "Aucune image disponible pour ce produit",
     "notFoundTitle": "Produit introuvable",
-    "notFoundDescription": "Ce produit est indisponible ou n’existe plus dans le catalogue."
+    "notFoundDescription": "Ce produit est indisponible ou n’existe plus dans le catalogue.",
+    "whatsapp": "WhatsApp",
+    "deliveryFee": "+ livraison",
+    "deliveryFree": "Livraison gratuite"
   },
   "Availability": {
     "in_stock": "En stock",
@@ -147,7 +135,10 @@
       "returns": "Retours"
     },
     "rights": "Tous droits réservés.",
-    "brandFallback": "Identité officielle EDebou."
+    "brandFallback": "Identité officielle EDebou.",
+    "cashOnDelivery": "Paiement à la livraison",
+    "deliveryFee": "Frais de livraison :",
+    "whatsapp": "Écrivez-nous sur WhatsApp"
   },
   "NotFound": {
     "eyebrow": "Erreur 404",

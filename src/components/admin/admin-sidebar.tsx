@@ -27,18 +27,19 @@ export function AdminSidebar({
       )}
     >
       <div className="flex h-full min-h-0 flex-col">
-        <div className="flex min-h-18 items-center border-b border-zinc-100 px-5 py-4">
+        <div className="flex min-h-14 items-center border-b border-zinc-100 px-4 py-2 lg:min-h-18 lg:px-5 lg:py-4">
           {brand}
         </div>
 
         <nav
           aria-label={navigationLabel}
-          className="min-h-0 flex-1 overflow-x-auto p-3 lg:overflow-y-auto lg:p-4"
+          className="min-h-0 flex-1 overflow-x-auto p-2 lg:overflow-y-auto lg:p-4"
         >
-          <div className="flex min-w-max gap-5 lg:min-w-0 lg:flex-col lg:gap-6">
+          <div className="flex min-w-max gap-1 lg:min-w-0 lg:flex-col lg:gap-6">
             {groups.map((group) => (
               <div key={group.id}>
-                <h2 className="mb-2 px-3 text-xs font-semibold text-zinc-500">
+                {/* Group titles only on wide screens: on phones the menu is one compact scrolling row. */}
+                <h2 className="mb-2 hidden px-3 text-xs font-semibold text-zinc-500 lg:block">
                   {group.label}
                 </h2>
                 <ul className="flex gap-1 lg:flex-col">
@@ -81,7 +82,7 @@ export function AdminSidebar({
         </nav>
 
         {footer ? (
-          <div className="border-t border-zinc-100 p-4">{footer}</div>
+          <div className="hidden border-t border-zinc-100 p-4 lg:block">{footer}</div>
         ) : null}
       </div>
     </aside>

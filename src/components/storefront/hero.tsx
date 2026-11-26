@@ -5,7 +5,10 @@ import {
   Smartphone,
   Sparkles,
 } from "lucide-react";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
+
+import { Reveal } from "@/components/motion/reveal";
+import { SplitText } from "@/components/ui/split-text";
 
 const visualItems = [
   { key: "technology" as const, Icon: Smartphone },
@@ -15,7 +18,7 @@ const visualItems = [
 ];
 
 export async function Hero() {
-  const t = await getTranslations("Hero");
+  const [t, locale] = await Promise.all([getTranslations("Hero"), getLocale()]);
 
   return (
     <section className="px-4 pb-16 pt-6 sm:px-6 sm:pt-8 lg:px-8 lg:pb-24 lg:pt-10">
@@ -24,9 +27,12 @@ export async function Hero() {
           <p className="mb-5 inline-flex w-fit items-center rounded-full border border-brand/15 bg-white px-3.5 py-2 text-xs font-bold uppercase tracking-[0.14em] text-brand">
             {t("eyebrow")}
           </p>
-          <h1 className="max-w-3xl text-4xl font-bold leading-[1.15] tracking-[-0.035em] text-ink sm:text-5xl lg:text-6xl">
-            {t("title")}
-          </h1>
+          <SplitText
+            tag="h1"
+            text={t("title")}
+            className="max-w-3xl text-4xl font-bold leading-[1.15] tracking-[-0.035em] text-ink sm:text-5xl lg:text-6xl"
+          />
+          <Reveal>
           <p className="mt-6 max-w-2xl text-base leading-8 text-muted sm:text-lg">
             {t("description")}
           </p>
@@ -42,15 +48,17 @@ export async function Hero() {
               />
             </a>
             <a
-              href="#categories"
+              href={locale === "fr" ? "/fr/products" : "/products"}
               className="inline-flex min-h-12 items-center justify-center rounded-xl border border-ink/15 bg-white px-6 py-3 font-bold text-ink transition-colors hover:border-brand/30 hover:text-brand"
             >
               {t("secondaryCta")}
             </a>
           </div>
+          </Reveal>
         </div>
 
-        <div className="relative flex items-center justify-center overflow-hidden bg-brand px-6 py-10 sm:px-10 lg:py-14">
+        {/* Decorative only: hidden on phones so the products come right after the title. */}
+        <div className="relative hidden items-center justify-center overflow-hidden bg-brand px-6 py-10 sm:px-10 lg:flex lg:py-14">
           <div
             aria-hidden="true"
             className="absolute -start-20 -top-20 size-64 rounded-full border-[3rem] border-white/10"

@@ -2,6 +2,7 @@ import { AlertTriangle, PackageSearch } from "lucide-react";
 import type { Route } from "next";
 import { getTranslations } from "next-intl/server";
 
+import { Reveal } from "@/components/motion/reveal";
 import { ProductCard } from "@/components/storefront/product-card";
 import { ProductRail } from "@/components/storefront/product-rail";
 import type { AppLocale } from "@/i18n/routing";
@@ -122,6 +123,7 @@ export async function ProductGrid({ locale }: ProductGridProps) {
             </p>
           </div>
         ) : (
+          <Reveal targets="li">
           <ProductRail locale={locale}>
             {products.map((product) => (
               <ProductCard
@@ -140,6 +142,7 @@ export async function ProductGrid({ locale }: ProductGridProps) {
               />
             ))}
           </ProductRail>
+          </Reveal>
         )}
       </div>
     </section>

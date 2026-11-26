@@ -15,7 +15,7 @@ export function StorefrontHome({ locale }: StorefrontHomeProps) {
       <SiteHeader locale={locale} />
       <main id="main-content">
         <Hero />
-        <CategoryGrid />
+        <CategoryGrid locale={locale} />
         <ProductGrid locale={locale} />
       </main>
       <SiteFooter locale={locale} />

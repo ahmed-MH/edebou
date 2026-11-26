@@ -62,7 +62,6 @@ export async function SiteHeader({ locale, productPage = false }: SiteHeaderProp
   const searchPlaceholder = tHeader("searchPlaceholder");
   const navigationItems = [
     { href: `${homeHref}#top`, label: tNavigation("home") },
-    { href: `${homeHref}#categories`, label: tNavigation("categories") },
     { href: productsHref, label: tNavigation("products") },
   ];
   const localeOptions = [

@@ -154,11 +154,24 @@ export function cartReducer(state: CartState, action: CartAction): CartState {
   }
 }
 
+// Mirrors priceOrderLine in src/lib/checkout/offer-pricing.ts; the server price is final.
+export function findBundleOffer(
+  priceTiers: readonly PublicProductPriceTierDto[],
+  quantity: number,
+): number | null {
+  return priceTiers.find(
+    (tier) => tier.minQuantity === quantity && tier.bundleTotalMillimes != null,
+  )?.bundleTotalMillimes ?? null;
+}
+
 export function getIndicativeUnitPrice(
   basePriceMillimes: number,
   priceTiers: readonly PublicProductPriceTierDto[],
   quantity: number,
 ): number {
+  const bundleTotal = findBundleOffer(priceTiers, quantity);
+  if (bundleTotal !== null) return Math.floor(bundleTotal / quantity);
+
   let unitPrice = basePriceMillimes;
   let selectedMinimum = 1;
 
@@ -177,10 +190,7 @@ export function getIndicativeLineTotal(
   priceTiers: readonly PublicProductPriceTierDto[],
   quantity: number,
 ): number {
-  const bundleOffer = priceTiers.find(
-    (tier) => tier.minQuantity === quantity && tier.bundleTotalMillimes != null,
-  );
-  return bundleOffer?.bundleTotalMillimes ??
+  return findBundleOffer(priceTiers, quantity) ??
     getIndicativeUnitPrice(basePriceMillimes, priceTiers, quantity) * quantity;
 }
 

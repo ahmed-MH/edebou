@@ -36,28 +36,22 @@ export default async function AdminProductsPage() {
         <div className="rounded-2xl border border-red-200 bg-red-50 p-5"><PackageX className="size-5 text-red-700" aria-hidden="true" /><strong className="mt-3 block text-3xl font-black text-red-950">{out}</strong><span className="text-sm text-red-800">Ruptures</span></div>
       </section>
 
-      <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[96rem] text-sm">
-            <thead className="border-b border-zinc-200 bg-zinc-50 text-xs uppercase tracking-wide text-zinc-500">
-              <tr><th className="px-5 py-3 text-start">Produit</th><th className="px-5 py-3 text-start">Catégorie</th><th className="px-5 py-3 text-start">État</th><th className="px-5 py-3 text-start">Prix et offres TND</th><th className="px-5 py-3 text-start">Stock</th><th className="px-5 py-3 text-center">Visible</th><th className="px-5 py-3 text-end">Action</th></tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-100">
-              {products.map((product) => (
-                <tr key={product.id} className="hover:bg-zinc-50/70">
-                  <td className="px-5 py-4"><Link href={`/admin/products/${product.id}`} className="block font-bold text-zinc-950 underline-offset-4 hover:text-brand hover:underline">{product.nameFr}</Link><span className="mt-1 block text-xs text-zinc-500">{product.sku} · {product.slug}</span></td>
-                  <td className="px-5 py-4 text-zinc-600">{product.category.nameFr}</td>
-                  <td className="px-5 py-4">{product.stockQuantity === 0 ? <AdminStatusBadge tone="brand">Rupture</AdminStatusBadge> : product.stockQuantity <= 5 ? <AdminStatusBadge tone="warning">Faible</AdminStatusBadge> : <AdminStatusBadge tone="positive">Disponible</AdminStatusBadge>}</td>
-                  <td colSpan={4} className="p-0">
-                    <AdminProductPricingForm product={product} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        {products.length === 0 ? <div className="p-14 text-center text-zinc-500"><Boxes className="mx-auto mb-3 size-8" aria-hidden="true" /> Aucun produit.</div> : null}
-      </div>
+      {/* One card per product (not a wide table) so prices and stock are editable on a phone. */}
+      <ul className="grid gap-4">
+        {products.map((product) => (
+          <li key={product.id} className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
+            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-zinc-100 px-4 py-4 sm:px-5">
+              <div className="min-w-0">
+                <Link href={`/admin/products/${product.id}`} className="block font-bold text-zinc-950 underline-offset-4 hover:text-brand hover:underline">{product.nameFr}</Link>
+                <span className="mt-1 block break-all text-xs text-zinc-500">{product.sku} · {product.category.nameFr}</span>
+              </div>
+              {product.stockQuantity === 0 ? <AdminStatusBadge tone="brand">Rupture</AdminStatusBadge> : product.stockQuantity <= 5 ? <AdminStatusBadge tone="warning">Faible</AdminStatusBadge> : <AdminStatusBadge tone="positive">Disponible</AdminStatusBadge>}
+            </div>
+            <AdminProductPricingForm product={product} />
+          </li>
+        ))}
+      </ul>
+      {products.length === 0 ? <div className="rounded-2xl border border-zinc-200 bg-white p-14 text-center text-zinc-500"><Boxes className="mx-auto mb-3 size-8" aria-hidden="true" /> Aucun produit.</div> : null}
     </>
   );
 }

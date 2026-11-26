@@ -9,6 +9,7 @@ import { formatTunisianDinars } from "@/lib/format-currency";
 import { commerceCopy } from "./commerce-copy";
 import { useCart } from "./cart-provider";
 import {
+  findBundleOffer,
   getIndicativeLineTotal,
   getIndicativeUnitPrice,
   MAX_CART_ITEM_QUANTITY,
@@ -52,12 +53,8 @@ function CartLine({
   }
 
   const name = product.name[locale];
-  const bundleOffer = product.priceTiers.find(
-    (tier) => tier.minQuantity === item.quantity && tier.bundleTotalMillimes != null,
-  );
-  const unitPrice = bundleOffer
-    ? Math.floor(bundleOffer.bundleTotalMillimes! / item.quantity)
-    : getIndicativeUnitPrice(
+  const isBundleOffer = findBundleOffer(product.priceTiers, item.quantity) !== null;
+  const unitPrice = getIndicativeUnitPrice(
     product.priceMillimes,
     product.priceTiers,
     item.quantity,
@@ -135,7 +132,7 @@ function CartLine({
             </label>
             <div>
               <p className="text-xs font-semibold text-muted">
-                {bundleOffer ? copy.common.averageUnitPrice : copy.common.unitPrice}
+                {isBundleOffer ? copy.common.averageUnitPrice : copy.common.unitPrice}
               </p>
               <bdi className="price-value mt-1 block font-bold text-ink">
                 {formatTunisianDinars(unitPrice, locale)}

@@ -16,6 +16,10 @@ import {
 const LOGIN_WINDOW_SECONDS = 15 * 60;
 const LOGIN_MAX_ATTEMPTS = 5;
 const ACCOUNT_LOCK_SECONDS = 15 * 60;
+// The email+IP limit above stops normal guessing. This account-wide lock only
+// catches attacks spread over many IPs; kept high so a stranger who knows the
+// owner's email cannot lock them out with a few wrong passwords.
+const ACCOUNT_LOCK_THRESHOLD = 50;
 
 interface LoginRateRow {
   readonly requestCount: number;
@@ -140,7 +144,7 @@ export async function authenticateAdmin(input: {
         data: {
           failedLoginCount,
           lockedUntil:
-            failedLoginCount >= LOGIN_MAX_ATTEMPTS
+            failedLoginCount >= ACCOUNT_LOCK_THRESHOLD
               ? new Date(Date.now() + ACCOUNT_LOCK_SECONDS * 1000)
               : user.lockedUntil,
         },
@@ -172,8 +176,10 @@ export async function authenticateAdmin(input: {
   const userAgentHash = hashAdminUserAgent(input.userAgent);
 
   await prisma.$transaction(async (transaction) => {
+    // Keep the user's other live sessions so phone and computer can stay signed in
+    // together; only expired sessions are cleaned up. Logout still revokes its own session.
     await transaction.adminSession.deleteMany({
-      where: { OR: [{ expiresAt: { lte: new Date() } }, { userId: user.id }] },
+      where: { expiresAt: { lte: new Date() } },
     });
     await transaction.adminSession.create({
       data: { userId: user.id, tokenHash, userAgentHash, expiresAt },

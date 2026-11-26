@@ -37,8 +37,8 @@ const products = [
       altFr: "Écouteurs sans fil",
     },
     tiers: [
-      { minQuantity: 6, unitPrice: BigInt(75_900) },
-      { minQuantity: 12, unitPrice: BigInt(71_900) },
+      { minQuantity: 2, unitPrice: BigInt(74900), bundleTotal: BigInt(149800) },
+      { minQuantity: 3, unitPrice: BigInt(73233), bundleTotal: BigInt(219700) },
     ],
   },
   {
@@ -58,8 +58,8 @@ const products = [
       altFr: "Bouilloire électrique",
     },
     tiers: [
-      { minQuantity: 4, unitPrice: BigInt(85_900) },
-      { minQuantity: 10, unitPrice: BigInt(81_900) },
+      { minQuantity: 2, unitPrice: BigInt(84900), bundleTotal: BigInt(169800) },
+      { minQuantity: 3, unitPrice: BigInt(83233), bundleTotal: BigInt(249700) },
     ],
   },
   {
@@ -79,8 +79,8 @@ const products = [
       altFr: "Sac à dos quotidien",
     },
     tiers: [
-      { minQuantity: 6, unitPrice: BigInt(61_900) },
-      { minQuantity: 12, unitPrice: BigInt(58_900) },
+      { minQuantity: 2, unitPrice: BigInt(59900), bundleTotal: BigInt(119800) },
+      { minQuantity: 3, unitPrice: BigInt(58233), bundleTotal: BigInt(174700) },
     ],
   },
   {
@@ -100,8 +100,8 @@ const products = [
       altFr: "Coffret soin quotidien",
     },
     tiers: [
-      { minQuantity: 8, unitPrice: BigInt(37_900) },
-      { minQuantity: 16, unitPrice: BigInt(35_900) },
+      { minQuantity: 2, unitPrice: BigInt(37400), bundleTotal: BigInt(74800) },
+      { minQuantity: 3, unitPrice: BigInt(36566), bundleTotal: BigInt(109700) },
     ],
   },
   {
@@ -216,7 +216,7 @@ async function seed(): Promise<void> {
               },
             },
             create: { productId: persistedProduct.id, ...tier },
-            update: { unitPrice: tier.unitPrice },
+            update: { unitPrice: tier.unitPrice, bundleTotal: tier.bundleTotal },
           });
         }
         await transaction.productPriceTier.deleteMany({
