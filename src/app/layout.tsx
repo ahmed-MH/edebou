@@ -52,6 +52,9 @@ export async function generateMetadata(): Promise<Metadata> {
         fr: "/fr",
       },
     },
+    other: {
+      "facebook-domain-verification": siteConfig.facebookDomainVerification,
+    },
   };
 }
 
