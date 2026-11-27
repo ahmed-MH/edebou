@@ -162,6 +162,8 @@ test("runtime and database environment templates keep privileged secrets separat
     "ADMIN_TRUSTED_PROXY_HOPS",
     "ADMIN_SESSION_TTL_HOURS",
     "PRODUCT_UPLOAD_DIR",
+    "META_CAPI_ACCESS_TOKEN",
+    "META_CAPI_TEST_EVENT_CODE",
   ]);
   assert.equal(runtimeEnvironment.DATABASE_URL, "");
   assert.equal(runtimeEnvironment.CHECKOUT_DATABASE_URL, "");
