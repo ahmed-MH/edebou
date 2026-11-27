@@ -166,6 +166,8 @@ services:
       ADMIN_TRUSTED_PROXY_HOPS: "1"
       ADMIN_SESSION_TTL_HOURS: ${ADMIN_SESSION_TTL_HOURS:-8}
       PRODUCT_UPLOAD_DIR: /app/storage/product-images
+      META_CAPI_ACCESS_TOKEN: ${META_CAPI_ACCESS_TOKEN:-}
+      META_CAPI_TEST_EVENT_CODE: ${META_CAPI_TEST_EVENT_CODE:-}
     expose:
       - "3000"
     volumes:

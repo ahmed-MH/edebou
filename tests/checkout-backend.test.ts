@@ -267,3 +267,52 @@ test("order numbers are short, dictatable and use the Tunis date", async () => {
   const number = createOrderNumber(new Date("2026-11-25T23:30:00Z"));
   assert.match(number, /^EDB-261126-\d{4}$/u);
 });
+
+test("Meta Conversions API Purchase matches the Pixel event and carries no customer data", async () => {
+  const { buildPurchaseEvent } = await import("../src/lib/meta-conversions");
+  const event = buildPurchaseEvent(
+    {
+      orderNumber: "EDB-261127-0310",
+      totalMillimes: 127_800,
+      items: [
+        { productSlug: "daily-backpack", quantity: 2 },
+        { productSlug: "wireless-earbuds", quantity: 1 },
+      ],
+      clientIp: "196.203.10.4",
+      userAgent: "Mozilla/5.0",
+      sourceUrl: "https://edebou.live/products/daily-backpack",
+      cookieHeader: "a=1; _fbp=fb.1.123.456; _fbc=fb.1.123.AbC",
+    },
+    1_800_000_000_123,
+  );
+
+  assert.equal(event.event_name, "Purchase");
+  assert.equal(event.event_id, "EDB-261127-0310"); // same id as the browser Pixel → counted once
+  assert.equal(event.event_time, 1_800_000_000);
+  assert.deepEqual(event.custom_data, {
+    currency: "TND",
+    value: 127.8,
+    content_type: "product",
+    content_ids: ["daily-backpack", "wireless-earbuds"],
+    num_items: 3,
+  });
+  assert.deepEqual(event.user_data, {
+    client_ip_address: "196.203.10.4",
+    client_user_agent: "Mozilla/5.0",
+    fbp: "fb.1.123.456",
+    fbc: "fb.1.123.AbC",
+  });
+
+  // A non-IP client token (local dev) is never sent as an IP.
+  const local = buildPurchaseEvent({
+    orderNumber: "EDB-1",
+    totalMillimes: 1_000,
+    items: [],
+    clientIp: "unattributed-direct-client",
+    userAgent: null,
+    sourceUrl: null,
+    cookieHeader: null,
+  });
+  assert.deepEqual(local.user_data, {});
+  assert.equal("event_source_url" in local, false);
+});
